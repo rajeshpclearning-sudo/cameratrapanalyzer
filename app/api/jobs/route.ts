@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { startBatch, initialFileStates } from "@/lib/batch";
 import { createJob, deleteOldJobs } from "@/lib/jobs-store";
 import { defaultCsvFilename, filenameFromUpload } from "@/lib/csv";
-import { isHeic, isSupportedImage } from "@/lib/image";
+import { isAcceptedImage } from "@/lib/image";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -51,13 +51,7 @@ export async function POST(request: Request) {
     const name = entry.name || "unknown.jpg";
     const mime = entry.type || "application/octet-stream";
 
-    if (isHeic(mime, name)) {
-      return NextResponse.json(
-        { error: `HEIC not supported: ${name}` },
-        { status: 400 },
-      );
-    }
-    if (!isSupportedImage(mime, name)) {
+    if (!isAcceptedImage(mime, name)) {
       return NextResponse.json(
         { error: `Unsupported image: ${name}` },
         { status: 400 },

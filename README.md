@@ -165,7 +165,36 @@ Each analyzed photo becomes **one row**. Designers can mock this as a table or G
 
 ---
 
-## Local MVP (current) — developer setup
+## Path A (current) — local MVP enhancements
+
+| Feature | Status |
+|---------|--------|
+| HEIC / HEIF upload (server converts to JPEG) | Done |
+| Thumbnails + click row to **preview** image and results | Done |
+| **Log Library** (browser localStorage, up to 30 runs) | Done |
+| **Empty-frame skip** (no LLM on uniform frames) | Done |
+| **Burst deduplication** (shots within 2s share one LLM call) | Done |
+| Railway deploy config (`railway.toml`, `/api/health`) | Done |
+
+Optional env: `SKIP_EMPTY_FRAMES`, `EMPTY_STDEV_THRESHOLD`, `BURST_GAP_MS`, `DEDUPE_BURST` — see [.env.example](.env.example).
+
+### Host on Railway
+
+1. Push this repo to [GitHub](https://github.com/rajeshpclearning-sudo/cameratrapanalyzer).
+2. Open [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub repo** → select `cameratrapanalyzer`.
+3. In the service **Variables**, add:
+   - `OPENAI_API_KEY` = your OpenAI key (required)
+   - Optional: `LLM_CONCURRENCY=2`, `SKIP_EMPTY_FRAMES=true`, `BURST_GAP_MS=2000`
+4. **Settings** → **Networking** → **Generate domain** (e.g. `*.up.railway.app`).
+5. Open the public URL — health check: `https://YOUR-DOMAIN/api/health`
+
+**CLI (optional):** `brew install railway`, `railway login`, `railway link`, `railway up`, then set variables in the dashboard.
+
+Note: Job progress is stored in memory (single instance). Restarts clear in-flight jobs.
+
+---
+
+## Local MVP — developer setup
 
 Runnable **local flow** — no Google sign-in, no database. Pick images on your machine, analyze via OpenAI, download (or append to) a CSV.
 
@@ -188,7 +217,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### Usage
 
-1. **Select images** — folder picker or individual files (JPEG, PNG, WebP; max 50 per batch).
+1. **Select images** — folder picker or individual files (JPEG, PNG, WebP, HEIC; max 50 per batch). Click a row to preview.
 2. **Optional existing log** — upload a `Camera_Trap_Analysis*.csv` to **append** new rows (header must match spec below).
 3. **Run analysis** — progress per file; uses EXIF for date/time when available.
 4. **Download CSV** — new file `Camera_Trap_Analysis_YYYY-MM-DD.csv`, or same name as the uploaded log when appending.
@@ -552,7 +581,8 @@ Rough savings: downscaling 50–80% image tokens; skipping empty frames 30–70%
 
 ## Implementation todos
 
-- [x] Local MVP: file picker, EXIF, LLM, CSV download/append
+- [x] Local MVP + Path A: HEIC, thumbnails, preview, log library, empty/burst optimizations
+- [x] Railway deploy files (`railway.toml`, health check)
 - [ ] Document GCP setup (Drive, Sheets, OAuth, redirect URIs)
 - [ ] Google OAuth + Prisma on Railway Postgres
 - [ ] Drive folder browser (thumbnails, multi-select)

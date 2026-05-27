@@ -1,9 +1,30 @@
 import { analyzeImage } from "./llm/analyze";
-import { buildCsv, defaultCsvFilename, filenameFromUpload, parseExistingCsv } from "./csv";
+import {
+  buildCsv,
+  defaultCsvFilename,
+  filenameFromUpload,
+  parseExistingCsv,
+} from "./csv";
 import { extractDateTime } from "./exif";
-import { isHeic, isSupportedImage, prepareImageForLlm } from "./image";
+import { decodeToJpeg, isAcceptedImage } from "./image";
 import { getJob, updateJob } from "./jobs-store";
+import {
+  burstGapMs,
+  emptyFrameRow,
+  groupBurstIndices,
+  isLikelyEmptyFrame,
+} from "./preprocess";
 import type { CsvRow, FileJobState, LlmAnalysis } from "./types";
+
+const SKIP_EMPTY = process.env.SKIP_EMPTY_FRAMES !== "false";
+const DEDUPE_BURST = process.env.DEDUPE_BURST !== "false";
+
+export type BatchFile = {
+  buffer: Buffer;
+  name: string;
+  mime: string;
+  lastModified: number;
+};
 
 function llmToRow(
   photoName: string,
@@ -21,72 +42,192 @@ function llmToRow(
   ];
 }
 
+function copyAnalysisRow(
+  photoName: string,
+  date: string,
+  timestamp: string,
+  source: CsvRow,
+): CsvRow {
+  return [photoName, date, timestamp, source[3], source[4], source[5]];
+}
+
 function getConcurrency(): number {
   const n = parseInt(process.env.LLM_CONCURRENCY ?? "2", 10);
   return Number.isFinite(n) && n > 0 ? Math.min(n, 5) : 2;
 }
 
-async function processFile(
+function markFile(
   jobId: string,
   index: number,
-  buffer: Buffer,
-  name: string,
-  mime: string,
-  lastModified: number,
-): Promise<CsvRow | null> {
+  patch: Partial<FileJobState>,
+): void {
   const job = getJob(jobId);
-  if (!job) return null;
+  if (!job) return;
+  const nextFiles = [...job.files];
+  nextFiles[index] = { ...nextFiles[index], ...patch };
+  updateJob(jobId, {
+    files: nextFiles,
+    completed: job.completed + 1,
+  });
+}
 
-  const files = [...job.files];
+function incrementStats(
+  jobId: string,
+  field: "emptySkipped" | "burstCopied" | "llmCalls",
+  n = 1,
+): void {
+  const job = getJob(jobId);
+  if (!job) return;
+  const stats = job.stats ?? {
+    emptySkipped: 0,
+    burstCopied: 0,
+    llmCalls: 0,
+  };
+  stats[field] += n;
+  updateJob(jobId, { stats });
+}
+
+async function getDateTime(
+  buffer: Buffer,
+  lastModified: number,
+): Promise<{ date: string; timestamp: string }> {
+  return extractDateTime(buffer, new Date(lastModified));
+}
+
+async function processLeader(
+  jobId: string,
+  index: number,
+  file: BatchFile,
+): Promise<CsvRow> {
+  const { buffer, name, mime, lastModified } = file;
+  const files = [...(getJob(jobId)?.files ?? [])];
   files[index] = { ...files[index], status: "analyzing" };
   updateJob(jobId, { files });
 
   try {
-    if (isHeic(mime, name)) {
-      throw new Error("HEIC/HEIF not supported in v0 — convert to JPEG first");
-    }
-    if (!isSupportedImage(mime, name)) {
+    if (!isAcceptedImage(mime, name)) {
       throw new Error(`Unsupported file type: ${mime || "unknown"}`);
     }
 
-    const { date, timestamp } = await extractDateTime(
-      buffer,
-      new Date(lastModified),
-    );
-    const jpeg = await prepareImageForLlm(buffer);
-    const analysis = await analyzeImage(jpeg);
-    const row = llmToRow(name, date, timestamp, analysis);
+    const jpeg = await decodeToJpeg(buffer);
+    const { date, timestamp } = await getDateTime(jpeg, lastModified);
 
-    const updated = getJob(jobId);
-    if (updated) {
-      const nextFiles = [...updated.files];
-      nextFiles[index] = { name, status: "done", row };
-      updateJob(jobId, {
-        files: nextFiles,
-        completed: updated.completed + 1,
-      });
+    if (SKIP_EMPTY && (await isLikelyEmptyFrame(jpeg))) {
+      const row = emptyFrameRow(name, date, timestamp);
+      markFile(jobId, index, { name, status: "skipped", row });
+      incrementStats(jobId, "emptySkipped");
+      return row;
     }
+
+    const analysis = await analyzeImage(jpeg);
+    incrementStats(jobId, "llmCalls");
+    const row = llmToRow(name, date, timestamp, analysis);
+    markFile(jobId, index, { name, status: "done", row });
     return row;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    const updated = getJob(jobId);
-    if (updated) {
-      const nextFiles = [...updated.files];
-      nextFiles[index] = { name, status: "error", error: message };
+    const job = getJob(jobId);
+    markFile(jobId, index, { name, status: "error", error: message });
+    if (job) {
+      updateJob(jobId, { errors: [...job.errors, `${name}: ${message}`] });
+    }
+    throw err;
+  }
+}
+
+async function processFollower(
+  jobId: string,
+  index: number,
+  file: BatchFile,
+  leaderRow: CsvRow,
+): Promise<CsvRow> {
+  const files = [...(getJob(jobId)?.files ?? [])];
+  files[index] = { ...files[index], status: "analyzing" };
+  updateJob(jobId, { files });
+
+  try {
+    const jpeg = await decodeToJpeg(file.buffer);
+    const { date, timestamp } = await getDateTime(jpeg, file.lastModified);
+    const row = copyAnalysisRow(file.name, date, timestamp, leaderRow);
+    markFile(jobId, index, { name: file.name, status: "done", row });
+    incrementStats(jobId, "burstCopied");
+    return row;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    const job = getJob(jobId);
+    markFile(jobId, index, {
+      name: file.name,
+      status: "error",
+      error: message,
+    });
+    if (job) {
       updateJob(jobId, {
-        files: nextFiles,
-        completed: updated.completed + 1,
-        errors: [...updated.errors, `${name}: ${message}`],
+        errors: [...job.errors, `${file.name}: ${message}`],
       });
     }
+    throw err;
+  }
+}
+
+async function processSingle(
+  jobId: string,
+  index: number,
+  file: BatchFile,
+): Promise<CsvRow | null> {
+  try {
+    return await processLeader(jobId, index, file);
+  } catch {
     return null;
   }
+}
+
+async function processGroup(
+  jobId: string,
+  group: number[],
+  files: BatchFile[],
+): Promise<(CsvRow | null)[]> {
+  if (!DEDUPE_BURST || group.length === 1) {
+    const rows: (CsvRow | null)[] = [];
+    for (const idx of group) {
+      rows.push(await processSingle(jobId, idx, files[idx]!));
+    }
+    return rows;
+  }
+
+  const leaderIdx = group[0]!;
+  let leaderRow: CsvRow | null = null;
+  try {
+    leaderRow = await processLeader(jobId, leaderIdx, files[leaderIdx]!);
+  } catch {
+    leaderRow = null;
+  }
+
+  const rows: (CsvRow | null)[] = new Array(group.length);
+  rows[0] = leaderRow;
+
+  if (!leaderRow) {
+    for (let i = 1; i < group.length; i++) {
+      const idx = group[i]!;
+      rows[i] = await processSingle(jobId, idx, files[idx]!);
+    }
+    return rows;
+  }
+
+  for (let i = 1; i < group.length; i++) {
+    const idx = group[i]!;
+    try {
+      rows[i] = await processFollower(jobId, idx, files[idx]!, leaderRow);
+    } catch {
+      rows[i] = null;
+    }
+  }
+  return rows;
 }
 
 async function runPool<T, R>(
   items: T[],
   concurrency: number,
-  fn: (item: T, index: number) => Promise<R>,
+  fn: (item: T) => Promise<R>,
 ): Promise<R[]> {
   const results: R[] = new Array(items.length);
   let nextIndex = 0;
@@ -95,21 +236,19 @@ async function runPool<T, R>(
     while (true) {
       const i = nextIndex++;
       if (i >= items.length) break;
-      results[i] = await fn(items[i], i);
+      results[i] = await fn(items[i]);
     }
   }
 
-  const workers = Array.from(
-    { length: Math.min(concurrency, items.length) },
-    () => worker(),
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, () => worker()),
   );
-  await Promise.all(workers);
   return results;
 }
 
 export type BatchInput = {
   jobId: string;
-  files: { buffer: Buffer; name: string; mime: string; lastModified: number }[];
+  files: BatchFile[];
   existingCsvBuffer?: Buffer;
   existingCsvName?: string;
 };
@@ -118,7 +257,10 @@ export function startBatch(input: BatchInput): void {
   const { jobId, files, existingCsvBuffer, existingCsvName } = input;
 
   void (async () => {
-    updateJob(jobId, { status: "running" });
+    updateJob(jobId, {
+      status: "running",
+      stats: { emptySkipped: 0, burstCopied: 0, llmCalls: 0 },
+    });
 
     let existingRows: CsvRow[] = [];
     let downloadFilename = defaultCsvFilename();
@@ -140,23 +282,28 @@ export function startBatch(input: BatchInput): void {
       return;
     }
 
+    const meta = files.map((f) => ({
+      name: f.name,
+      lastModified: f.lastModified,
+    }));
+    const groups = groupBurstIndices(meta);
     const concurrency = getConcurrency();
-    const newRows: (CsvRow | null)[] = await runPool(
-      files,
-      concurrency,
-      (file, index) =>
-        processFile(
-          jobId,
-          index,
-          file.buffer,
-          file.name,
-          file.mime,
-          file.lastModified,
-        ),
+
+    const groupResults = await runPool(groups, concurrency, (group) =>
+      processGroup(jobId, group, files),
     );
 
-    const appended = newRows.filter((r): r is CsvRow => r !== null);
-    const allRows = [...existingRows, ...appended];
+    const newRows: CsvRow[] = [];
+    let gi = 0;
+    for (const group of groups) {
+      const gRows = groupResults[gi++] ?? [];
+      for (let i = 0; i < group.length; i++) {
+        const row = gRows[i];
+        if (row) newRows.push(row);
+      }
+    }
+
+    const allRows = [...existingRows, ...newRows];
     const csvContent = buildCsv(allRows);
 
     updateJob(jobId, {
@@ -176,3 +323,5 @@ export function startBatch(input: BatchInput): void {
 export function initialFileStates(names: string[]): FileJobState[] {
   return names.map((name) => ({ name, status: "pending" }));
 }
+
+export { burstGapMs, SKIP_EMPTY, DEDUPE_BURST };

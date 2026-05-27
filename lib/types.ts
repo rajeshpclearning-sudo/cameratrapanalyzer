@@ -34,7 +34,18 @@ export type LlmAnalysis = {
   has_human: boolean;
 };
 
-export type FileJobStatus = "pending" | "analyzing" | "done" | "error";
+export type FileJobStatus =
+  | "pending"
+  | "analyzing"
+  | "done"
+  | "error"
+  | "skipped";
+
+export type JobStats = {
+  emptySkipped: number;
+  burstCopied: number;
+  llmCalls: number;
+};
 
 export type FileJobState = {
   name: string;
@@ -55,6 +66,7 @@ export type Job = {
   csvContent?: string;
   downloadFilename: string;
   createdAt: number;
+  stats?: JobStats;
 };
 
 export type JobPollResponse = {
@@ -66,4 +78,5 @@ export type JobPollResponse = {
   errors: string[];
   csvReady: boolean;
   downloadFilename: string;
+  stats?: JobStats;
 };

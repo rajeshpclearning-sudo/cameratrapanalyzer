@@ -23,6 +23,7 @@ export async function GET(_request: Request, { params }: Params) {
     errors: job.errors,
     csvReady: job.status === "completed" && !!job.csvContent,
     downloadFilename: job.downloadFilename,
+    stats: job.stats,
   };
 
   return NextResponse.json(body);
