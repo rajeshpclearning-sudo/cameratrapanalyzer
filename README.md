@@ -188,6 +188,40 @@ Optional env: `SKIP_EMPTY_FRAMES`, `EMPTY_STDEV_THRESHOLD`, `BURST_GAP_MS`, `DED
 4. **Settings** → **Networking** → **Generate domain** (e.g. `*.up.railway.app`).
 5. Open the public URL — health check: `https://YOUR-DOMAIN/api/health`
 
+#### Service shows “Online” but you don’t see a website
+
+Railway’s project canvas only shows a green **Online** badge on the service card — it does **not** show your public URL until you add one.
+
+1. Click the **cameratrapanalyzer** service (not just the project background).
+2. Open the **Settings** tab (gear icon in the left sidebar for that service).
+3. Scroll to **Networking** → **Public Networking**.
+4. Click **Generate Domain** (or **+ Domain**). Copy the `something.up.railway.app` link.
+5. Open that URL in a new browser tab. You should see **WildEye Analyzer**. Test: `https://YOUR-DOMAIN/api/health` → `{"ok":true}`.
+6. If the domain returns **502** or a blank page: open **Deployments** → latest deploy → **View logs**. Fix build errors, ensure `OPENAI_API_KEY` is set, then **Redeploy**.
+
+#### Page looks unstyled (plain white/grey, visible “Choose Files” buttons)
+
+The HTML is loading but **CSS is not**. You’ll see default browser fonts and native file pickers instead of the dark WildEye layout.
+
+1. **Local:** stop the dev server, then run:
+   ```bash
+   rm -rf .next node_modules
+   npm install
+   npm run dev
+   ```
+   Open http://localhost:3000 and hard-refresh (**Cmd+Shift+R** on Mac).
+2. Confirm `npm install` finishes without errors and that `node_modules/tailwindcss` exists.
+3. In the browser **Network** tab, check that `/_next/static/css/*.css` returns **200** (not 404).
+4. **`nextjs-portal` in the DOM** is only the Next.js dev overlay in development — it is not an error and can be ignored.
+
+#### “Run Analysis” fails (e.g. “string did not match the expected pattern”)
+
+That Safari message usually means the server returned a **non-JSON error** (often HTTP 500 with an empty body). Common causes:
+
+1. **`OPENAI_API_KEY` missing** in Railway **Variables** — add it and redeploy.
+2. **`sharp` / image processing** on Linux — use `npm run start` (not standalone `server.js`) and keep `outputFileTracingIncludes` for `sharp` in `next.config.ts` (already in repo).
+3. Check **Deploy logs** while clicking Run Analysis; look for `sharp` or `OPENAI` errors.
+
 **CLI (optional):** `brew install railway`, `railway login`, `railway link`, `railway up`, then set variables in the dashboard.
 
 Note: Job progress is stored in memory (single instance). Restarts clear in-flight jobs.

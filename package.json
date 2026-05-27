@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start -p ${PORT:-3000}",
+    "build": "next build && node scripts/copy-standalone.mjs && node scripts/verify-css.mjs",
+    "start": "HOSTNAME=0.0.0.0 next start -p ${PORT:-3000}",
+    "start:standalone": "HOSTNAME=0.0.0.0 node .next/standalone/server.js",
     "lint": "next lint"
   },
   "dependencies": {
@@ -14,15 +15,15 @@
     "openai": "^4.77.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "sharp": "^0.33.5"
+    "sharp": "^0.33.5",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.16"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.16",
     "typescript": "^5.7.2"
   }
 }

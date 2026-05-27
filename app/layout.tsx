@@ -32,7 +32,12 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className={`${hanken.className} flex min-h-screen`}>{children}</body>
+      <body
+        className={`${hanken.className} flex min-h-screen bg-background text-on-surface`}
+        style={{ backgroundColor: "#101511", color: "#dfe4dd" }}
+      >
+        {children}
+      </body>
     </html>
   );
 }

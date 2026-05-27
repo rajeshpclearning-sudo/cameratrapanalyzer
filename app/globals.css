@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Base colors even if Tailwind utilities fail to load (dev cache / blocked CSS). */
+html {
+  background-color: #101511;
+  color: #dfe4dd;
+}
+
+input[type="file"][data-ui-file-input] {
+  display: none !important;
+}
+
 @layer base {
   body {
     @apply bg-background text-on-surface overflow-x-hidden;

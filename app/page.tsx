@@ -8,6 +8,7 @@ import {
   canStoreCsv,
   saveJobHistory,
 } from "@/lib/job-history";
+import { readApiJson } from "@/lib/api-client";
 import type { CsvRow, FileJobState, JobPollResponse } from "@/lib/types";
 
 const MAX_FILES = 50;
@@ -299,8 +300,14 @@ export default function Home() {
 
     try {
       const res = await fetch("/api/jobs", { method: "POST", body: form });
-      const data = await res.json();
-      if (!res.ok) {
+      const parsed = await readApiJson<{ jobId?: string; error?: string }>(res);
+      if ("error" in parsed) {
+        setError(parsed.error);
+        setSubmitting(false);
+        return;
+      }
+      const { data } = parsed;
+      if (!res.ok || !data.jobId) {
         setError(data.error ?? "Failed to start job");
         setSubmitting(false);
         return;
@@ -457,9 +464,9 @@ export default function Home() {
                   </div>
                 </div>
 
-                <input ref={folderInputRef} type="file" accept={ACCEPT} multiple className="hidden" onChange={onFolderChange} {...({ webkitdirectory: "" } as React.InputHTMLAttributes<HTMLInputElement>)} />
-                <input ref={filesInputRef} type="file" accept={ACCEPT} multiple className="hidden" onChange={onFilesChange} />
-                <input ref={csvInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => setExistingCsv(e.target.files?.[0] ?? null)} />
+                <input ref={folderInputRef} type="file" accept={ACCEPT} multiple hidden data-ui-file-input className="hidden" onChange={onFolderChange} {...({ webkitdirectory: "" } as React.InputHTMLAttributes<HTMLInputElement>)} />
+                <input ref={filesInputRef} type="file" accept={ACCEPT} multiple hidden data-ui-file-input className="hidden" onChange={onFilesChange} />
+                <input ref={csvInputRef} type="file" accept=".csv,text/csv" hidden data-ui-file-input className="hidden" onChange={(e) => setExistingCsv(e.target.files?.[0] ?? null)} />
 
                 <div className="grid grid-cols-1 gap-md md:grid-cols-2">
                   <button type="button" onClick={() => folderInputRef.current?.click()} className="group flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-outline-variant bg-surface-container-low p-lg transition-colors hover:border-primary">

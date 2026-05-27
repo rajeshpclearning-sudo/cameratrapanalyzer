@@ -1,21 +1,36 @@
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
-import { startBatch, initialFileStates } from "@/lib/batch";
 import { createJob, deleteOldJobs } from "@/lib/jobs-store";
+import type { FileJobState } from "@/lib/types";
 import { defaultCsvFilename, filenameFromUpload } from "@/lib/csv";
-import { isAcceptedImage } from "@/lib/image";
+import { isAcceptedImage } from "@/lib/image-accept";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const MAX_FILES = 50;
 
+function initialFileStates(names: string[]): FileJobState[] {
+  return names.map((name) => ({ name, status: "pending" }));
+}
+
 export async function POST(request: Request) {
+  try {
+    return await handlePost(request);
+  } catch (err) {
+    console.error("[POST /api/jobs]", err);
+    const message =
+      err instanceof Error ? err.message : "Failed to start analysis job";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+async function handlePost(request: Request) {
   deleteOldJobs();
 
   if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json(
-      { error: "OPENAI_API_KEY is not configured" },
+      { error: "OPENAI_API_KEY is not configured on the server" },
       { status: 500 },
     );
   }
@@ -94,6 +109,7 @@ export async function POST(request: Request) {
     createdAt: Date.now(),
   });
 
+  const { startBatch } = await import("@/lib/batch");
   startBatch({
     jobId,
     files,
