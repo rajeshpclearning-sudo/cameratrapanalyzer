@@ -57,9 +57,30 @@ function getClient(): OpenAI {
     throw new Error("OPENAI_API_KEY is not set");
   }
   if (!client) {
-    client = new OpenAI({ apiKey: key });
+    const baseURL =
+      process.env.OPENAI_BASE_URL ??
+      (key.startsWith("sk-or-") ? "https://openrouter.ai/api/v1" : undefined);
+    const openRouter = baseURL?.includes("openrouter.ai");
+    client = new OpenAI({
+      apiKey: key,
+      baseURL,
+      defaultHeaders: openRouter
+        ? {
+            "HTTP-Referer":
+              process.env.OPENROUTER_SITE_URL ?? "http://localhost:3000",
+            "X-Title": "WildEye Analyzer",
+          }
+        : undefined,
+    });
   }
   return client;
+}
+
+function getModel(): string {
+  if (process.env.LLM_MODEL) return process.env.LLM_MODEL;
+  const key = process.env.OPENAI_API_KEY ?? "";
+  if (key.startsWith("sk-or-")) return "openai/gpt-4o-mini";
+  return "gpt-4o-mini";
 }
 
 export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
@@ -67,7 +88,7 @@ export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
   const openai = getClient();
 
   const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: getModel(),
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       {

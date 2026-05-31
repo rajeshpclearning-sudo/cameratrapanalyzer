@@ -8,6 +8,7 @@ export type JobHistoryEntry = {
   skipped: number;
   llmCalls: number;
   burstCopied: number;
+  burstInferred?: number;
   /** Stored only when CSV is small enough for localStorage */
   csvContent?: string;
 };

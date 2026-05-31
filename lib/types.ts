@@ -44,6 +44,7 @@ export type FileJobStatus =
 export type JobStats = {
   emptySkipped: number;
   burstCopied: number;
+  burstInferred: number;
   llmCalls: number;
 };
 
@@ -54,7 +55,12 @@ export type FileJobState = {
   row?: CsvRow;
 };
 
-export type JobStatus = "queued" | "running" | "completed" | "failed";
+export type JobStatus =
+  | "queued"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled";
 
 export type Job = {
   id: string;
@@ -67,6 +73,7 @@ export type Job = {
   downloadFilename: string;
   createdAt: number;
   stats?: JobStats;
+  cancelRequested?: boolean;
 };
 
 export type JobPollResponse = {

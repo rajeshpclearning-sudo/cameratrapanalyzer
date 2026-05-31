@@ -1,15 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { FileListTable } from "@/app/components/FileListTable";
 import { LogLibraryView } from "@/app/components/LogLibraryView";
 import { PreviewModal } from "@/app/components/PreviewModal";
-import { formatFileSize } from "@/lib/format";
 import {
   canStoreCsv,
   saveJobHistory,
 } from "@/lib/job-history";
 import { readApiJson } from "@/lib/api-client";
-import type { CsvRow, FileJobState, JobPollResponse } from "@/lib/types";
+import { getSessionStatusDisplay } from "@/lib/file-status-display";
+import type { CsvRow, JobPollResponse } from "@/lib/types";
 
 const MAX_FILES = 50;
 const POLL_MS = 800;
@@ -39,51 +40,6 @@ function Icon({ name, className = "" }: { name: string; className?: string }) {
   );
 }
 
-function statusBadge(status: FileJobState["status"]) {
-  switch (status) {
-    case "done":
-      return {
-        label: "DONE",
-        row: "bg-surface-dim/50 border-outline-variant/20",
-        icon: "check_circle",
-        iconClass: "text-primary",
-        badge: "text-primary bg-primary/10",
-      };
-    case "skipped":
-      return {
-        label: "SKIPPED",
-        row: "bg-surface-container-high/50 border-outline-variant/20",
-        icon: "hide_image",
-        iconClass: "text-on-surface-variant",
-        badge: "text-on-surface-variant bg-surface-container-highest",
-      };
-    case "analyzing":
-      return {
-        label: "ANALYZING",
-        row: "bg-surface-container-high border-primary/40 pulsing-blue",
-        icon: "sync",
-        iconClass: "text-[#0091ff] text-sm animate-spin",
-        badge: "text-[#0091ff] bg-[#0091ff]/10",
-      };
-    case "error":
-      return {
-        label: "ERROR",
-        row: "bg-error-container/10 border-error/20",
-        icon: "error",
-        iconClass: "text-error text-sm",
-        badge: "text-error bg-error/10",
-      };
-    default:
-      return {
-        label: "PENDING",
-        row: "bg-surface-dim/30 border-outline-variant/10",
-        icon: "pending",
-        iconClass: "text-on-surface-variant text-sm",
-        badge: "text-on-surface-variant",
-      };
-  }
-}
-
 function isImageFile(f: File): boolean {
   const t = f.type.toLowerCase();
   const ext = f.name.split(".").pop()?.toLowerCase();
@@ -107,6 +63,7 @@ export default function Home() {
   const [poll, setPoll] = useState<JobPollResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [stopping, setStopping] = useState(false);
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const savedHistoryRef = useRef(false);
@@ -220,15 +177,31 @@ export default function Home() {
     const tick = async () => {
       try {
         const res = await fetch(`/api/jobs/${id}`);
+        if (res.status === 404) {
+          stopPolling();
+          setSubmitting(false);
+          setStopping(false);
+          setJobId(null);
+          setPoll(null);
+          setError(
+            "This analysis session expired (for example after a server restart). Run analysis again to continue.",
+          );
+          return;
+        }
         if (!res.ok) return;
         const data = (await res.json()) as JobPollResponse;
         setPoll(data);
-        if (data.status === "completed" || data.status === "failed") {
+        if (
+          data.status === "completed" ||
+          data.status === "failed" ||
+          data.status === "cancelled"
+        ) {
           stopPolling();
           setSubmitting(false);
+          setStopping(false);
         }
       } catch {
-        // keep polling
+        // keep polling on transient network errors
       }
     };
     void tick();
@@ -237,7 +210,7 @@ export default function Home() {
 
   useEffect(() => {
     if (
-      poll?.status !== "completed" ||
+      (poll?.status !== "completed" && poll?.status !== "cancelled") ||
       !jobId ||
       savedHistoryRef.current
     ) {
@@ -273,6 +246,7 @@ export default function Home() {
         skipped,
         llmCalls: poll.stats?.llmCalls ?? 0,
         burstCopied: poll.stats?.burstCopied ?? 0,
+        burstInferred: poll.stats?.burstInferred ?? 0,
         csvContent,
       });
     })();
@@ -320,6 +294,24 @@ export default function Home() {
     }
   };
 
+  const stopAnalysis = async () => {
+    if (!jobId || stopping) return;
+    setStopping(true);
+    try {
+      const res = await fetch(`/api/jobs/${jobId}/cancel`, { method: "POST" });
+      if (!res.ok) {
+        const parsed = await readApiJson<{ error?: string }>(res);
+        setError(
+          "error" in parsed ? parsed.error : "Failed to stop analysis",
+        );
+        setStopping(false);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to stop analysis");
+      setStopping(false);
+    }
+  };
+
   const downloadCsv = () => {
     if (!jobId) return;
     window.location.href = `/api/jobs/${jobId}/download`;
@@ -334,6 +326,7 @@ export default function Home() {
     setPreview(null);
     stopPolling();
     setSubmitting(false);
+    setStopping(false);
     savedHistoryRef.current = false;
     if (csvInputRef.current) csvInputRef.current.value = "";
   };
@@ -343,9 +336,17 @@ export default function Home() {
       ? Math.round((poll.completed / poll.total) * 100)
       : 0;
 
-  const showProgress = submitting && poll;
+  const showProgress =
+    !!poll &&
+    (submitting || poll.status === "running" || poll.status === "queued");
+  const analysisRunning =
+    !!poll && poll.status === "running" && !stopping;
+  const sessionFinished =
+    poll?.status === "completed" ||
+    poll?.status === "cancelled" ||
+    poll?.status === "failed";
+  const sessionStatus = getSessionStatusDisplay(poll, submitting, stopping);
   const csvReady = poll?.csvReady && jobId;
-  const statusFiles = poll?.files ?? [];
 
   const sessionLabel =
     localFiles.length > 0
@@ -419,15 +420,71 @@ export default function Home() {
       </aside>
 
       <main className="ml-64 flex min-h-screen flex-grow flex-col">
-        <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-outline-variant bg-surface-container px-lg">
-          <div className="flex items-center space-x-md">
-            <span className="text-headline-sm text-on-surface-variant">
-              {view === "analysis" ? "Camera Trap Session /" : "Log Library /"}
-            </span>
-            <span className="text-headline-sm font-bold text-primary">
-              {view === "analysis" ? sessionLabel : "Saved runs"}
-            </span>
+        <header className="sticky top-0 z-40 border-b border-outline-variant bg-surface-container">
+          <div className="flex h-16 w-full items-center justify-between px-lg">
+            <div className="flex min-w-0 items-center gap-md">
+              <div className="flex min-w-0 items-center space-x-md">
+                <span className="text-headline-sm text-on-surface-variant">
+                  {view === "analysis" ? "Camera Trap Session /" : "Log Library /"}
+                </span>
+                <span className="truncate text-headline-sm font-bold text-primary">
+                  {view === "analysis" ? sessionLabel : "Saved runs"}
+                </span>
+              </div>
+              {view === "analysis" && sessionStatus && (
+                <span
+                  className={`hidden items-center gap-1 rounded-full border px-sm py-1 font-mono text-[10px] uppercase sm:inline-flex ${sessionStatus.chipClass}`}
+                >
+                  <Icon
+                    name={sessionStatus.icon}
+                    className={`text-sm ${sessionStatus.label === "Running" ? "animate-spin" : ""}`}
+                  />
+                  {sessionStatus.label}
+                </span>
+              )}
+            </div>
+            {view === "analysis" && (analysisRunning || stopping) && (
+              <button
+                type="button"
+                disabled={stopping}
+                onClick={() => void stopAnalysis()}
+                className="flex shrink-0 items-center space-x-xs rounded-xl border border-error/40 bg-error-container/10 px-md py-2 font-mono text-label-md font-bold uppercase text-error transition-all hover:bg-error/10 disabled:opacity-50"
+              >
+                <Icon name="stop_circle" className="text-lg" />
+                <span>{stopping ? "Stopping…" : "Stop"}</span>
+              </button>
+            )}
           </div>
+          {view === "analysis" && showProgress && (
+            <div className="border-t border-outline-variant/50 px-lg pb-sm pt-xs">
+              <div className="flex items-center justify-between gap-sm">
+                <p className="truncate font-mono text-[10px] uppercase text-on-surface-variant">
+                  {sessionStatus?.detail ?? "Processing photos"}
+                </p>
+                <span className="shrink-0 font-mono text-[10px] text-primary">
+                  {progressPct}%
+                </span>
+              </div>
+              <div
+                className="mt-xs h-1.5 w-full overflow-hidden rounded-full bg-surface-dim"
+                role="progressbar"
+                aria-valuenow={progressPct}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    poll?.status === "cancelled"
+                      ? "bg-on-surface-variant"
+                      : poll?.status === "completed"
+                        ? "bg-primary"
+                        : "bg-[#0091ff]"
+                  }`}
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+            </div>
+          )}
         </header>
 
         {view === "library" ? (
@@ -481,55 +538,20 @@ export default function Home() {
                   </button>
                 </div>
 
-                <div className="flex flex-col overflow-hidden rounded-xl border border-outline-variant bg-surface-container">
-                  <div className="grid grid-cols-12 border-b border-outline-variant bg-surface-container-high px-md py-sm font-mono text-[10px] uppercase text-on-surface-variant">
-                    <div className="col-span-1 flex justify-center">
-                      <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-outline-variant bg-surface-dim text-primary" />
-                    </div>
-                    <div className="col-span-1" />
-                    <div className="col-span-5">Filename</div>
-                    <div className="col-span-2">Size</div>
-                    <div className="col-span-3 text-right">Status</div>
-                  </div>
-                  <div className="max-h-[400px] overflow-y-auto">
-                    {localFiles.length === 0 ? (
-                      <p className="px-md py-lg text-center text-label-md text-on-surface-variant">
-                        No images selected. Click a row to preview after adding.
-                      </p>
-                    ) : (
-                      localFiles.map((item) => {
-                        const pollFile = poll?.files.find((f) => f.name === item.file.name);
-                        const status = pollFile?.status ?? "ready";
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => openPreview(item)}
-                            className="grid w-full grid-cols-12 items-center border-b border-outline-variant/30 px-md py-2 text-left font-mono text-label-md transition-colors hover:bg-surface-container-highest"
-                          >
-                            <div className="col-span-1 flex justify-center" onClick={(e) => e.stopPropagation()}>
-                              <input type="checkbox" checked={item.selected} onChange={() => toggleFile(item.id)} className="rounded border-outline-variant bg-surface-dim text-primary" />
-                            </div>
-                            <div className="col-span-1 flex justify-center">
-                              {thumbUrls[item.id] ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={thumbUrls[item.id]} alt="" className="h-10 w-10 rounded object-cover border border-outline-variant/50" />
-                              ) : (
-                                <Icon name="image" className="text-primary" />
-                              )}
-                            </div>
-                            <div className="col-span-5 truncate pr-xs">{item.file.name}</div>
-                            <div className="col-span-2 text-on-surface-variant">{formatFileSize(item.file.size)}</div>
-                            <div className="col-span-3 truncate text-right text-on-surface-variant capitalize">{status}</div>
-                          </button>
-                        );
-                      })
-                    )}
-                  </div>
+                <div className="max-h-[520px] overflow-y-auto">
+                  <FileListTable
+                    localFiles={localFiles}
+                    poll={poll}
+                    thumbUrls={thumbUrls}
+                    allSelected={allSelected}
+                    onToggleAll={toggleAll}
+                    onToggleFile={toggleFile}
+                    onOpenPreview={openPreview}
+                  />
                 </div>
                 {localFiles.length > 0 && (
                   <p className="font-mono text-label-md text-on-surface-variant">
-                    {selectedCount} of {localFiles.length} selected · click a row to preview
+                    {selectedCount} of {localFiles.length} selected · results appear in the table as each photo is analyzed · click a row to preview
                   </p>
                 )}
               </section>
@@ -559,83 +581,122 @@ export default function Home() {
                 </div>
 
                 <div className="flex flex-col space-y-md rounded-xl border border-outline-variant bg-surface-container p-md">
-                  <div className="flex items-center space-x-sm">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-outline-variant text-sm font-bold text-background">3</span>
-                    <h3 className="text-headline-sm font-semibold">Run Analysis</h3>
+                  <div className="flex items-center justify-between gap-sm">
+                    <div className="flex items-center space-x-sm">
+                      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-outline-variant text-sm font-bold text-background">3</span>
+                      <h3 className="text-headline-sm font-semibold">Run Analysis</h3>
+                    </div>
+                    {sessionStatus && (
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full border px-sm py-0.5 font-mono text-[10px] uppercase xl:hidden ${sessionStatus.chipClass}`}
+                      >
+                        <Icon
+                          name={sessionStatus.icon}
+                          className={`text-sm ${sessionStatus.label === "Running" ? "animate-spin" : ""}`}
+                        />
+                        {sessionStatus.label}
+                      </span>
+                    )}
                   </div>
 
-                  <button type="button" disabled={submitting || selectedCount === 0} onClick={() => void runAnalysis()} className="flex w-full items-center justify-center space-x-sm rounded-xl bg-primary py-4 text-headline-sm font-bold text-background shadow-lg shadow-primary/10 transition-all hover:brightness-110 disabled:opacity-50">
-                    <Icon name="bolt" />
-                    <span>{submitting ? "Running…" : "Run Analysis"}</span>
-                  </button>
-
-                  {showProgress && (
-                    <div className="space-y-sm border-t border-outline-variant pt-md">
-                      <div className="flex items-end justify-between">
-                        <span className="font-mono text-[10px] uppercase text-on-surface-variant">Processing queue</span>
-                        <span className="font-mono text-primary">{poll.completed} / {poll.total}</span>
+                  {!submitting && !sessionFinished ? (
+                    <button
+                      type="button"
+                      disabled={selectedCount === 0}
+                      onClick={() => void runAnalysis()}
+                      className="flex w-full items-center justify-center space-x-sm rounded-xl bg-primary py-4 text-headline-sm font-bold text-background shadow-lg shadow-primary/10 transition-all hover:brightness-110 disabled:opacity-50"
+                    >
+                      <Icon name="bolt" />
+                      <span>Run Analysis</span>
+                    </button>
+                  ) : (submitting || sessionFinished) && poll ? (
+                    <div className="rounded-xl border border-outline-variant bg-surface-dim p-sm">
+                      <div className="flex items-center justify-between gap-sm">
+                        <div className="flex items-center gap-xs">
+                          <Icon
+                            name={sessionStatus?.icon ?? "sync"}
+                            className={`text-primary ${sessionStatus?.label === "Running" ? "animate-spin" : ""}`}
+                          />
+                          <span className="text-label-md font-medium">
+                            {sessionStatus?.label ?? "Running"}
+                          </span>
+                        </div>
+                        <span className="font-mono text-[10px] text-on-surface-variant">
+                          {poll?.completed ?? 0} / {poll?.total ?? 0}
+                        </span>
                       </div>
-                      <div className="h-3 w-full overflow-hidden rounded-full border border-outline-variant bg-surface-dim" role="progressbar" aria-valuenow={progressPct}>
-                        <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${progressPct}%` }} />
-                      </div>
-                      {poll.stats && (
-                        <p className="font-mono text-[10px] text-on-surface-variant">
-                          LLM calls: {poll.stats.llmCalls}
-                          {poll.stats.emptySkipped > 0 && ` · ${poll.stats.emptySkipped} empty skipped`}
-                          {poll.stats.burstCopied > 0 && ` · ${poll.stats.burstCopied} burst copies`}
+                      {sessionStatus?.detail && (
+                        <p className="mt-xs text-label-md text-on-surface-variant">
+                          {sessionStatus.detail}
                         </p>
                       )}
                     </div>
-                  )}
+                  ) : null}
 
-                  {statusFiles.length > 0 && (
-                    <div className="max-h-[280px] space-y-2 overflow-y-auto pr-xs">
-                      {statusFiles.map((f) => {
-                        const s = statusBadge(f.status);
-                        const local = localFiles.find((lf) => lf.file.name === f.name);
-                        return (
-                          <button
-                            key={f.name}
-                            type="button"
-                            onClick={() => {
-                              if (local && thumbUrls[local.id]) {
-                                setPreview({
-                                  fileId: local.id,
-                                  fileName: f.name,
-                                  imageUrl: thumbUrls[local.id],
-                                  row: f.row,
-                                  status: f.status,
-                                  error: f.error,
-                                });
-                              }
-                            }}
-                            className={`flex w-full items-center justify-between rounded-lg border p-xs text-left ${s.row}`}
-                          >
-                            <div className="flex min-w-0 items-center space-x-xs">
-                              <Icon name={s.icon} className={s.iconClass} />
-                              <span className="max-w-[150px] truncate text-label-md">{f.name}</span>
-                            </div>
-                            <span className={`shrink-0 rounded px-2 py-0.5 font-mono text-[10px] uppercase ${s.badge}`}>{s.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {poll?.status === "failed" && poll.errors.length > 0 && (
-                    <p className="text-label-md text-error">{poll.errors.join("; ")}</p>
-                  )}
-
-                  {poll?.status === "completed" && (
-                    <p className="text-label-md text-on-surface-variant">
-                      Complete. Saved to Log Library if CSV was small enough to cache.
+                  {showProgress && poll.stats && (
+                    <p className="font-mono text-[10px] text-on-surface-variant">
+                      LLM calls: {poll.stats.llmCalls}
+                      {poll.stats.emptySkipped > 0 && ` · ${poll.stats.emptySkipped} empty skipped`}
+                      {poll.stats.burstCopied > 0 && ` · ${poll.stats.burstCopied} burst copies`}
+                      {poll.stats.burstInferred > 0 && ` · ${poll.stats.burstInferred} burst ID`}
                     </p>
                   )}
 
-                  <button type="button" disabled={!csvReady} onClick={downloadCsv} className={`flex w-full items-center justify-center space-x-sm rounded-xl border border-primary py-3 font-mono text-label-md font-bold text-primary hover:bg-primary/5 ${csvReady ? "" : "cursor-not-allowed opacity-50"}`}>
+                  {poll?.status === "failed" && poll.errors.length > 0 && (
+                    <div className="rounded-lg border border-error/30 bg-error-container/10 px-sm py-xs text-label-md text-error">
+                      {poll.errors.join("; ")}
+                    </div>
+                  )}
+
+                  {poll?.status === "cancelled" && (
+                    <div className="flex items-start gap-sm rounded-lg border border-outline-variant bg-surface-container-high px-sm py-xs">
+                      <Icon name="stop_circle" className="mt-0.5 shrink-0 text-on-surface-variant" />
+                      <p className="text-label-md text-on-surface-variant">
+                        Analysis stopped early. Download partial results below for photos that already finished.
+                      </p>
+                    </div>
+                  )}
+
+                  {poll?.status === "completed" && (
+                    <div className="flex items-start gap-sm rounded-lg border border-primary/30 bg-primary/5 px-sm py-xs">
+                      <Icon name="check_circle" className="mt-0.5 shrink-0 text-primary" />
+                      <p className="text-label-md text-on-surface-variant">
+                        All selected photos analyzed. Saved to Log Library if the CSV was small enough to cache.
+                      </p>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    disabled={!csvReady}
+                    onClick={downloadCsv}
+                    className={`flex w-full items-center justify-center space-x-sm rounded-xl border border-primary py-3 font-mono text-label-md font-bold text-primary hover:bg-primary/5 ${csvReady ? "" : "cursor-not-allowed opacity-50"}`}
+                  >
                     <Icon name="download" />
-                    <span>{csvReady && poll?.downloadFilename ? `Download ${poll.downloadFilename}` : "Download Result (.CSV)"}</span>
+                    <span>
+                      {csvReady && poll?.downloadFilename
+                        ? `Download ${poll.downloadFilename}`
+                        : "Download Result (.CSV)"}
+                    </span>
                   </button>
+
+                  {sessionFinished && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPoll(null);
+                        setJobId(null);
+                        setSubmitting(false);
+                        setStopping(false);
+                        stopPolling();
+                        savedHistoryRef.current = false;
+                      }}
+                      className="flex w-full items-center justify-center space-x-sm rounded-xl border border-outline-variant py-3 font-mono text-label-md text-on-surface-variant hover:bg-surface-container-high"
+                    >
+                      <Icon name="refresh" />
+                      <span>Run again</span>
+                    </button>
+                  )}
                 </div>
 
                 <div className="relative overflow-hidden rounded-xl border border-outline-variant bg-surface-container-low p-md">
@@ -643,7 +704,8 @@ export default function Home() {
                   <p className="text-label-md text-on-surface">
                     <span className="font-bold text-primary">HEIC</span> converted server-side ·{" "}
                     <span className="font-bold text-primary">empty frames</span> skip LLM ·{" "}
-                    <span className="font-bold text-primary">burst shots</span> within 2s share one analysis
+                    <span className="font-bold text-primary">burst shots</span> within 2s share one analysis ·{" "}
+                    <span className="font-bold text-primary">unidentified</span> burst frames borrow a clear species from neighbors
                   </p>
                 </div>
               </aside>

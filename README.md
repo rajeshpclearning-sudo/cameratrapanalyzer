@@ -182,9 +182,22 @@ Optional env: `SKIP_EMPTY_FRAMES`, `EMPTY_STDEV_THRESHOLD`, `BURST_GAP_MS`, `DED
 
 1. Push this repo to [GitHub](https://github.com/rajeshpclearning-sudo/cameratrapanalyzer).
 2. Open [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub repo** → select `cameratrapanalyzer`.
-3. In the service **Variables**, add:
-   - `OPENAI_API_KEY` = your OpenAI key (required)
-   - Optional: `LLM_CONCURRENCY=2`, `SKIP_EMPTY_FRAMES=true`, `BURST_GAP_MS=2000`
+3. Set **Variables** on the `cameratrapanalyzer` service (copy values from `.env.local`):
+
+   | Variable | Value |
+   |----------|--------|
+   | `OPENAI_API_KEY` | Your OpenRouter `sk-or-v1-...` key |
+   | `OPENAI_BASE_URL` | `https://openrouter.ai/api/v1` |
+   | `LLM_MODEL` | `openai/gpt-4o-mini` |
+   | `OPENROUTER_SITE_URL` | `https://cameratrapanalyzer-production.up.railway.app` (your public domain) |
+
+   **CLI (after `railway login` and `railway link` in this repo):**
+   ```bash
+   ./scripts/railway-sync-env.sh
+   railway redeploy
+   ```
+
+   Optional: `LLM_CONCURRENCY=2`, `SKIP_EMPTY_FRAMES=true`, `BURST_GAP_MS=2000`
 4. **Settings** → **Networking** → **Generate domain** (e.g. `*.up.railway.app`).
 5. Open the public URL — health check: `https://YOUR-DOMAIN/api/health`
 

@@ -13,7 +13,10 @@ export async function GET(_request: Request, { params }: Params) {
     return NextResponse.json({ error: "Job not found" }, { status: 404 });
   }
 
-  if (job.status !== "completed" || !job.csvContent) {
+  if (
+    (job.status !== "completed" && job.status !== "cancelled") ||
+    !job.csvContent
+  ) {
     return NextResponse.json(
       { error: "CSV not ready" },
       { status: 400 },

@@ -1,3 +1,7 @@
+import {
+  isUnidentifiedSpecies,
+  reconcileBurstSpecies,
+} from "./burst-species";
 import { analyzeImage } from "./llm/analyze";
 import {
   buildCsv,
@@ -7,7 +11,7 @@ import {
 } from "./csv";
 import { extractDateTime } from "./exif";
 import { decodeToJpeg, isAcceptedImage } from "./image";
-import { getJob, updateJob } from "./jobs-store";
+import { getJob, isJobCancelRequested, updateJob } from "./jobs-store";
 import {
   burstGapMs,
   emptyFrameRow,
@@ -71,9 +75,37 @@ function markFile(
   });
 }
 
+function patchFileRow(jobId: string, index: number, row: CsvRow): void {
+  const job = getJob(jobId);
+  if (!job) return;
+  const nextFiles = [...job.files];
+  nextFiles[index] = { ...nextFiles[index], row, status: "done" };
+  updateJob(jobId, { files: nextFiles });
+}
+
+function applyBurstReconciliation(
+  jobId: string,
+  group: number[],
+  rows: (CsvRow | null)[],
+): (CsvRow | null)[] {
+  const { rows: reconciled, inferred } = reconcileBurstSpecies(rows);
+  if (inferred === 0) return reconciled;
+
+  for (let i = 0; i < group.length; i++) {
+    const before = rows[i];
+    const after = reconciled[i];
+    if (before && after && before[3] !== after[3]) {
+      patchFileRow(jobId, group[i]!, after);
+    }
+  }
+
+  incrementStats(jobId, "burstInferred", inferred);
+  return reconciled;
+}
+
 function incrementStats(
   jobId: string,
-  field: "emptySkipped" | "burstCopied" | "llmCalls",
+  field: "emptySkipped" | "burstCopied" | "burstInferred" | "llmCalls",
   n = 1,
 ): void {
   const job = getJob(jobId);
@@ -81,6 +113,7 @@ function incrementStats(
   const stats = job.stats ?? {
     emptySkipped: 0,
     burstCopied: 0,
+    burstInferred: 0,
     llmCalls: 0,
   };
   stats[field] += n;
@@ -191,7 +224,7 @@ async function processGroup(
     for (const idx of group) {
       rows.push(await processSingle(jobId, idx, files[idx]!));
     }
-    return rows;
+    return applyBurstReconciliation(jobId, group, rows);
   }
 
   const leaderIdx = group[0]!;
@@ -210,18 +243,25 @@ async function processGroup(
       const idx = group[i]!;
       rows[i] = await processSingle(jobId, idx, files[idx]!);
     }
-    return rows;
+    return applyBurstReconciliation(jobId, group, rows);
   }
+
+  const leaderUnclear = isUnidentifiedSpecies(leaderRow[3]);
 
   for (let i = 1; i < group.length; i++) {
     const idx = group[i]!;
     try {
-      rows[i] = await processFollower(jobId, idx, files[idx]!, leaderRow);
+      if (leaderUnclear) {
+        rows[i] = await processSingle(jobId, idx, files[idx]!);
+      } else {
+        rows[i] = await processFollower(jobId, idx, files[idx]!, leaderRow);
+      }
     } catch {
       rows[i] = null;
     }
   }
-  return rows;
+
+  return applyBurstReconciliation(jobId, group, rows);
 }
 
 async function runPool<T, R>(
@@ -253,13 +293,39 @@ export type BatchInput = {
   existingCsvName?: string;
 };
 
+function finalizeCancelled(
+  jobId: string,
+  existingRows: CsvRow[],
+  downloadFilename: string,
+): void {
+  const job = getJob(jobId);
+  if (!job) return;
+
+  const files = job.files.map((f) =>
+    f.status === "pending" || f.status === "analyzing"
+      ? { ...f, status: "skipped" as const }
+      : f,
+  );
+
+  const newRows = files
+    .filter((f) => f.row)
+    .map((f) => f.row!);
+
+  updateJob(jobId, {
+    status: "cancelled",
+    files,
+    csvContent: buildCsv([...existingRows, ...newRows]),
+    downloadFilename,
+  });
+}
+
 export function startBatch(input: BatchInput): void {
   const { jobId, files, existingCsvBuffer, existingCsvName } = input;
 
   void (async () => {
     updateJob(jobId, {
       status: "running",
-      stats: { emptySkipped: 0, burstCopied: 0, llmCalls: 0 },
+      stats: { emptySkipped: 0, burstCopied: 0, burstInferred: 0, llmCalls: 0 },
     });
 
     let existingRows: CsvRow[] = [];
@@ -289,9 +355,17 @@ export function startBatch(input: BatchInput): void {
     const groups = groupBurstIndices(meta);
     const concurrency = getConcurrency();
 
-    const groupResults = await runPool(groups, concurrency, (group) =>
-      processGroup(jobId, group, files),
-    );
+    const groupResults = await runPool(groups, concurrency, (group) => {
+      if (isJobCancelRequested(jobId)) {
+        return Promise.resolve(group.map(() => null));
+      }
+      return processGroup(jobId, group, files);
+    });
+
+    if (isJobCancelRequested(jobId)) {
+      finalizeCancelled(jobId, existingRows, downloadFilename);
+      return;
+    }
 
     const newRows: CsvRow[] = [];
     let gi = 0;

@@ -21,7 +21,9 @@ export async function GET(_request: Request, { params }: Params) {
     completed: job.completed,
     files: job.files,
     errors: job.errors,
-    csvReady: job.status === "completed" && !!job.csvContent,
+    csvReady:
+      (job.status === "completed" || job.status === "cancelled") &&
+      !!job.csvContent,
     downloadFilename: job.downloadFilename,
     stats: job.stats,
   };
