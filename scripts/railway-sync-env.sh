@@ -41,12 +41,29 @@ fi
 BASE_URL="${OPENAI_BASE_URL:-https://openrouter.ai/api/v1}"
 MODEL="${LLM_MODEL:-openai/gpt-4o-mini}"
 
-echo "Setting Railway variables for linked service..."
-railway variables set \
-  "OPENAI_API_KEY=${OPENAI_API_KEY}" \
-  "OPENAI_BASE_URL=${BASE_URL}" \
-  "LLM_MODEL=${MODEL}" \
+VARS=(
+  "OPENAI_API_KEY=${OPENAI_API_KEY}"
+  "OPENAI_BASE_URL=${BASE_URL}"
+  "LLM_MODEL=${MODEL}"
   "OPENROUTER_SITE_URL=${RAILWAY_SITE}"
+)
+
+if [[ -n "${SUPABASE_URL:-}" && -n "${SUPABASE_SERVICE_ROLE_KEY:-}" ]]; then
+  if [[ "$SUPABASE_URL" == *supabase.com/dashboard* ]]; then
+    echo "WARNING: SUPABASE_URL looks like a dashboard link — use https://YOUR_REF.supabase.co"
+    echo "Skipping Supabase vars. Fix .env.local and run again."
+  else
+    VARS+=("SUPABASE_URL=${SUPABASE_URL}")
+    VARS+=("SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}")
+    echo "Including Supabase variables from .env.local"
+  fi
+else
+  echo "Note: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not in .env.local — skipping Supabase sync"
+fi
+
+echo "Setting Railway variables for linked service..."
+railway variables set "${VARS[@]}"
 
 echo "Done. Redeploy if the service is already running:"
 echo "  railway redeploy"
+echo "Verify: curl -s https://YOUR-DOMAIN/api/health  (look for supabaseConfigured: true)"

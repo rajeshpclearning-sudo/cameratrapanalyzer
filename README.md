@@ -190,12 +190,18 @@ Optional env: `SKIP_EMPTY_FRAMES`, `EMPTY_STDEV_THRESHOLD`, `BURST_GAP_MS`, `DED
    | `OPENAI_BASE_URL` | `https://openrouter.ai/api/v1` |
    | `LLM_MODEL` | `openai/gpt-4o-mini` |
    | `OPENROUTER_SITE_URL` | `https://cameratrapanalyzer-production.up.railway.app` (your public domain) |
+   | `SUPABASE_URL` | `https://YOUR_PROJECT_REF.supabase.co` (not the dashboard link) |
+   | `SUPABASE_SERVICE_ROLE_KEY` | Secret key from Supabase → Settings → API Keys |
+
+   `.env.local` on your laptop does **not** affect Railway — copy these into Railway **Variables** or use the sync script below.
 
    **CLI (after `railway login` and `railway link` in this repo):**
    ```bash
    ./scripts/railway-sync-env.sh
    railway redeploy
    ```
+
+   `railway-sync-env.sh` pushes OpenRouter vars and Supabase vars (when present in `.env.local`). After deploy, check `https://YOUR-DOMAIN/api/health` — `supabaseConfigured` should be `true`.
 
    Optional: `LLM_CONCURRENCY=2`, `SKIP_EMPTY_FRAMES=true`, `BURST_GAP_MS=2000`
 4. **Settings** → **Networking** → **Generate domain** (e.g. `*.up.railway.app`).

@@ -798,7 +798,6 @@ export default function Home() {
                       <Icon name="check_circle" className="mt-0.5 shrink-0 text-primary" />
                       <p className="text-label-md text-on-surface-variant">
                         All photos analyzed. Saved to Log Library if the CSV was small enough to cache.
-                        {sessionCsv && " New rows also append to Supabase when configured."}
                       </p>
                     </div>
                   )}
@@ -811,6 +810,39 @@ export default function Home() {
                       </p>
                     </div>
                   )}
+
+                  {poll?.supabase &&
+                    (poll.status === "completed" || poll.status === "cancelled") && (
+                      <>
+                        {poll.supabase.saved > 0 && (
+                          <div className="flex items-start gap-sm rounded-lg border border-primary/30 bg-primary/5 px-sm py-xs">
+                            <Icon name="database" className="mt-0.5 shrink-0 text-primary" />
+                            <p className="text-label-md text-on-surface-variant">
+                              Saved {poll.supabase.saved} row
+                              {poll.supabase.saved === 1 ? "" : "s"} to Supabase.
+                            </p>
+                          </div>
+                        )}
+                        {!poll.supabase.configured && (
+                          <div className="flex items-start gap-sm rounded-lg border border-outline-variant bg-surface-container-high px-sm py-xs">
+                            <Icon name="database" className="mt-0.5 shrink-0 text-on-surface-variant" />
+                            <p className="text-label-md text-on-surface-variant">
+                              Supabase not configured on server. Add SUPABASE_URL and
+                              SUPABASE_SERVICE_ROLE_KEY in Railway Variables (or .env.local
+                              for local dev).
+                            </p>
+                          </div>
+                        )}
+                        {poll.supabase.error && (
+                          <div className="flex items-start gap-sm rounded-lg border border-error/30 bg-error-container/10 px-sm py-xs">
+                            <Icon name="error" className="mt-0.5 shrink-0 text-error" />
+                            <p className="text-label-md text-error">
+                              Supabase save failed: {poll.supabase.error}
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    )}
 
                   <button
                     type="button"

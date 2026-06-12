@@ -1,5 +1,11 @@
-import { getSupabaseAdmin } from "./supabase";
+import { getSupabaseAdmin, isSupabaseConfigured } from "./supabase";
 import type { CsvRow } from "./types";
+
+export type PersistSightingsResult = {
+  configured: boolean;
+  inserted: number;
+  error?: string;
+};
 
 function rowToRecord(jobId: string, row: CsvRow) {
   const count = parseInt(row[4], 10);
@@ -14,13 +20,28 @@ function rowToRecord(jobId: string, row: CsvRow) {
   };
 }
 
-/** Saves newly analyzed rows to Supabase. Skips silently if not configured. */
+/** Saves newly analyzed rows to Supabase. Returns status for job poll / UI. */
 export async function persistSightings(
   jobId: string,
   rows: CsvRow[],
-): Promise<void> {
+): Promise<PersistSightingsResult> {
+  const configured = isSupabaseConfigured();
+  if (!configured) {
+    return { configured: false, inserted: 0 };
+  }
+
+  if (rows.length === 0) {
+    return { configured: true, inserted: 0 };
+  }
+
   const supabase = getSupabaseAdmin();
-  if (!supabase || rows.length === 0) return;
+  if (!supabase) {
+    return {
+      configured: false,
+      inserted: 0,
+      error: "Invalid Supabase configuration (check SUPABASE_URL)",
+    };
+  }
 
   const { error } = await supabase
     .from("camera_trap_sightings")
@@ -28,5 +49,8 @@ export async function persistSightings(
 
   if (error) {
     console.error("[supabase] persist sightings failed:", error.message);
+    return { configured: true, inserted: 0, error: error.message };
   }
+
+  return { configured: true, inserted: rows.length };
 }

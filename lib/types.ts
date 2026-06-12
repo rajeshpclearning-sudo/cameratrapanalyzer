@@ -62,6 +62,12 @@ export type JobStatus =
   | "failed"
   | "cancelled";
 
+export type JobSupabaseStatus = {
+  saved: number;
+  configured: boolean;
+  error?: string;
+};
+
 export type Job = {
   id: string;
   status: JobStatus;
@@ -74,6 +80,7 @@ export type Job = {
   createdAt: number;
   stats?: JobStats;
   cancelRequested?: boolean;
+  supabase?: JobSupabaseStatus;
 };
 
 export type JobPollResponse = {
@@ -86,4 +93,5 @@ export type JobPollResponse = {
   csvReady: boolean;
   downloadFilename: string;
   stats?: JobStats;
+  supabase?: JobSupabaseStatus;
 };

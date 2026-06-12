@@ -294,11 +294,11 @@ export type BatchInput = {
   existingCsvName?: string;
 };
 
-function finalizeCancelled(
+async function finalizeCancelled(
   jobId: string,
   existingRows: CsvRow[],
   downloadFilename: string,
-): void {
+): Promise<void> {
   const job = getJob(jobId);
   if (!job) return;
 
@@ -312,14 +312,19 @@ function finalizeCancelled(
     .filter((f) => f.row)
     .map((f) => f.row!);
 
+  const supabaseResult = await persistSightings(jobId, newRows);
+
   updateJob(jobId, {
     status: "cancelled",
     files,
     csvContent: buildCsv([...existingRows, ...newRows]),
     downloadFilename,
+    supabase: {
+      saved: supabaseResult.inserted,
+      configured: supabaseResult.configured,
+      error: supabaseResult.error,
+    },
   });
-
-  void persistSightings(jobId, newRows);
 }
 
 export function startBatch(input: BatchInput): void {
@@ -366,7 +371,7 @@ export function startBatch(input: BatchInput): void {
     });
 
     if (isJobCancelRequested(jobId)) {
-      finalizeCancelled(jobId, existingRows, downloadFilename);
+      await finalizeCancelled(jobId, existingRows, downloadFilename);
       return;
     }
 
@@ -383,13 +388,18 @@ export function startBatch(input: BatchInput): void {
     const allRows = [...existingRows, ...newRows];
     const csvContent = buildCsv(allRows);
 
+    const supabaseResult = await persistSightings(jobId, newRows);
+
     updateJob(jobId, {
       status: "completed",
       csvContent,
       downloadFilename,
+      supabase: {
+        saved: supabaseResult.inserted,
+        configured: supabaseResult.configured,
+        error: supabaseResult.error,
+      },
     });
-
-    void persistSightings(jobId, newRows);
   })().catch((err) => {
     const message = err instanceof Error ? err.message : String(err);
     updateJob(jobId, {

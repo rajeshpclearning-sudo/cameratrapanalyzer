@@ -26,6 +26,7 @@ export async function GET(_request: Request, { params }: Params) {
       !!job.csvContent,
     downloadFilename: job.downloadFilename,
     stats: job.stats,
+    supabase: job.supabase,
   };
 
   return NextResponse.json(body);
