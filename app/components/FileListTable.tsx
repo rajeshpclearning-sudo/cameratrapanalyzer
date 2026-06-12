@@ -4,7 +4,7 @@ import { getAnalysisDisplay } from "@/lib/analysis-display";
 import { getFileStatusDisplay } from "@/lib/file-status-display";
 import { formatFileSize } from "@/lib/format";
 import { CSV_HEADER } from "@/lib/types";
-import type { JobPollResponse } from "@/lib/types";
+import type { FileJobState, JobPollResponse } from "@/lib/types";
 
 export type LocalFileItem = {
   id: string;
@@ -15,6 +15,7 @@ export type LocalFileItem = {
 type Props = {
   localFiles: LocalFileItem[];
   poll: JobPollResponse | null;
+  completedByName?: Record<string, FileJobState>;
   thumbUrls: Record<string, string>;
   allSelected: boolean;
   onToggleAll: () => void;
@@ -35,6 +36,7 @@ const tdClass = "whitespace-nowrap px-sm py-2 font-mono text-label-md";
 export function FileListTable({
   localFiles,
   poll,
+  completedByName = {},
   thumbUrls,
   allSelected,
   onToggleAll,
@@ -83,9 +85,9 @@ export function FileListTable({
               </tr>
             ) : (
               localFiles.map((item) => {
-                const pollFile = poll?.files.find(
-                  (f) => f.name === item.file.name,
-                );
+                const pollFile =
+                  poll?.files.find((f) => f.name === item.file.name) ??
+                  completedByName[item.file.name];
                 const status = pollFile?.status ?? "ready";
                 const statusDisplay = getFileStatusDisplay(status, jobStatus);
                 const analysis = getAnalysisDisplay(pollFile);

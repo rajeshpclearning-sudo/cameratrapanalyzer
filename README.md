@@ -280,9 +280,9 @@ npm run dev:clean
 
 1. **Select images** — folder picker or individual files (JPEG, PNG, WebP, HEIC; max 50 per batch). Click a row to preview.
 2. **Optional existing log** — upload a `Camera_Trap_Analysis*.csv` to **append** new rows (header must match spec below).
-3. **Run analysis** — progress per file; uses EXIF for date/time when available.
+3. **Run analysis** — progress per file; uses EXIF for date/time when available. After a batch finishes, you can **upload more photos** in the same session — **Run Analysis** stays available and only processes photos not yet analyzed; results append to the session CSV (and Supabase when configured).
 4. **Download CSV** — new file `Camera_Trap_Analysis_YYYY-MM-DD.csv`, or same name as the uploaded log when appending.
-5. **Optional Supabase** — when configured, each **newly analyzed** row in a finished job is inserted into `camera_trap_sightings` (rows from an uploaded existing CSV are not re-inserted).
+5. **Optional Supabase** — when configured, each **newly analyzed** row in a finished job is inserted into `camera_trap_sightings` (rows from an uploaded existing CSV or earlier session rows are not re-inserted).
 
 ### Optional: Supabase backup (personal, no login)
 

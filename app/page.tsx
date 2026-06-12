@@ -10,7 +10,7 @@ import {
 } from "@/lib/job-history";
 import { readApiJson } from "@/lib/api-client";
 import { getSessionStatusDisplay } from "@/lib/file-status-display";
-import type { CsvRow, JobPollResponse } from "@/lib/types";
+import type { CsvRow, FileJobState, JobPollResponse } from "@/lib/types";
 
 const MAX_FILES = 50;
 const POLL_MS = 800;
@@ -40,6 +40,10 @@ function Icon({ name, className = "" }: { name: string; className?: string }) {
   );
 }
 
+function isFileAnalyzed(state?: FileJobState): boolean {
+  return state?.status === "done" || state?.status === "skipped";
+}
+
 function isImageFile(f: File): boolean {
   const t = f.type.toLowerCase();
   const ext = f.name.split(".").pop()?.toLowerCase();
@@ -65,6 +69,13 @@ export default function Home() {
   const [submitting, setSubmitting] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [preview, setPreview] = useState<PreviewState | null>(null);
+  const [completedByName, setCompletedByName] = useState<
+    Record<string, FileJobState>
+  >({});
+  const [sessionCsv, setSessionCsv] = useState<{
+    content: string;
+    filename: string;
+  } | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const savedHistoryRef = useRef(false);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -120,7 +131,9 @@ export default function Home() {
   }, []);
 
   const openPreview = (item: LocalFile) => {
-    const pollFile = poll?.files.find((f) => f.name === item.file.name);
+    const pollFile =
+      poll?.files.find((f) => f.name === item.file.name) ??
+      completedByName[item.file.name];
     setPreview({
       fileId: item.id,
       fileName: item.file.name,
@@ -252,10 +265,53 @@ export default function Home() {
     })();
   }, [poll, jobId]);
 
+  useEffect(() => {
+    if (
+      !poll ||
+      (poll.status !== "completed" &&
+        poll.status !== "cancelled" &&
+        poll.status !== "failed")
+    ) {
+      return;
+    }
+
+    setCompletedByName((prev) => {
+      const next = { ...prev };
+      for (const f of poll.files) {
+        if (
+          f.status === "done" ||
+          f.status === "skipped" ||
+          f.status === "error"
+        ) {
+          next[f.name] = f;
+        }
+      }
+      return next;
+    });
+  }, [poll]);
+
+  useEffect(() => {
+    if (!jobId || !poll?.csvReady || !poll.downloadFilename) return;
+    if (poll.status !== "completed" && poll.status !== "cancelled") return;
+
+    void (async () => {
+      try {
+        const res = await fetch(`/api/jobs/${jobId}/download`);
+        if (!res.ok) return;
+        const text = await res.text();
+        setSessionCsv({ content: text, filename: poll.downloadFilename });
+      } catch {
+        // optional — next run can still proceed without append
+      }
+    })();
+  }, [jobId, poll?.status, poll?.csvReady, poll?.downloadFilename]);
+
   const runAnalysis = async () => {
-    const selected = localFiles.filter((f) => f.selected);
+    const selected = localFiles.filter(
+      (f) => f.selected && !isFileAnalyzed(completedByName[f.file.name]),
+    );
     if (selected.length === 0) {
-      setError("Select at least one image.");
+      setError("Select at least one new image that has not been analyzed yet.");
       return;
     }
 
@@ -270,6 +326,9 @@ export default function Home() {
     }
     if (existingCsv) {
       form.append("existingCsv", existingCsv);
+    } else if (sessionCsv) {
+      const blob = new Blob([sessionCsv.content], { type: "text/csv" });
+      form.append("existingCsv", blob, sessionCsv.filename);
     }
 
     try {
@@ -324,11 +383,24 @@ export default function Home() {
     setJobId(null);
     setError(null);
     setPreview(null);
+    setCompletedByName({});
+    setSessionCsv(null);
     stopPolling();
     setSubmitting(false);
     setStopping(false);
     savedHistoryRef.current = false;
     if (csvInputRef.current) csvInputRef.current.value = "";
+  };
+
+  const clearAnalysisState = () => {
+    setPoll(null);
+    setJobId(null);
+    setSubmitting(false);
+    setStopping(false);
+    setCompletedByName({});
+    setSessionCsv(null);
+    stopPolling();
+    savedHistoryRef.current = false;
   };
 
   const progressPct =
@@ -341,11 +413,24 @@ export default function Home() {
     (submitting || poll.status === "running" || poll.status === "queued");
   const analysisRunning =
     !!poll && poll.status === "running" && !stopping;
+  const hasUnanalyzedFiles = localFiles.some(
+    (f) => !isFileAnalyzed(completedByName[f.file.name]),
+  );
+  const unanalyzedSelected = localFiles.filter(
+    (f) => f.selected && !isFileAnalyzed(completedByName[f.file.name]),
+  );
   const sessionFinished =
-    poll?.status === "completed" ||
-    poll?.status === "cancelled" ||
-    poll?.status === "failed";
-  const sessionStatus = getSessionStatusDisplay(poll, submitting, stopping);
+    (poll?.status === "completed" ||
+      poll?.status === "cancelled" ||
+      poll?.status === "failed") &&
+    !hasUnanalyzedFiles;
+  const canRunAnalysis =
+    !submitting && !analysisRunning && unanalyzedSelected.length > 0;
+  const sessionStatusRaw = getSessionStatusDisplay(poll, submitting, stopping);
+  const sessionStatus =
+    sessionStatusRaw?.label === "Complete" && hasUnanalyzedFiles
+      ? null
+      : sessionStatusRaw;
   const csvReady = poll?.csvReady && jobId;
 
   const sessionLabel =
@@ -542,6 +627,7 @@ export default function Home() {
                   <FileListTable
                     localFiles={localFiles}
                     poll={poll}
+                    completedByName={completedByName}
                     thumbUrls={thumbUrls}
                     allSelected={allSelected}
                     onToggleAll={toggleAll}
@@ -599,17 +685,20 @@ export default function Home() {
                     )}
                   </div>
 
-                  {!submitting && !sessionFinished ? (
+                  {canRunAnalysis ? (
                     <button
                       type="button"
-                      disabled={selectedCount === 0}
                       onClick={() => void runAnalysis()}
-                      className="flex w-full items-center justify-center space-x-sm rounded-xl bg-primary py-4 text-headline-sm font-bold text-background shadow-lg shadow-primary/10 transition-all hover:brightness-110 disabled:opacity-50"
+                      className="flex w-full items-center justify-center space-x-sm rounded-xl bg-primary py-4 text-headline-sm font-bold text-background shadow-lg shadow-primary/10 transition-all hover:brightness-110"
                     >
                       <Icon name="bolt" />
-                      <span>Run Analysis</span>
+                      <span>
+                        {Object.keys(completedByName).length > 0
+                          ? `Analyze ${unanalyzedSelected.length} new photo${unanalyzedSelected.length === 1 ? "" : "s"}`
+                          : "Run Analysis"}
+                      </span>
                     </button>
-                  ) : (submitting || sessionFinished) && poll ? (
+                  ) : (submitting || analysisRunning || sessionFinished) && poll ? (
                     <div className="rounded-xl border border-outline-variant bg-surface-dim p-sm">
                       <div className="flex items-center justify-between gap-sm">
                         <div className="flex items-center gap-xs">
@@ -657,11 +746,21 @@ export default function Home() {
                     </div>
                   )}
 
-                  {poll?.status === "completed" && (
+                  {poll?.status === "completed" && !hasUnanalyzedFiles && (
                     <div className="flex items-start gap-sm rounded-lg border border-primary/30 bg-primary/5 px-sm py-xs">
                       <Icon name="check_circle" className="mt-0.5 shrink-0 text-primary" />
                       <p className="text-label-md text-on-surface-variant">
-                        All selected photos analyzed. Saved to Log Library if the CSV was small enough to cache.
+                        All photos analyzed. Saved to Log Library if the CSV was small enough to cache.
+                        {sessionCsv && " New rows also append to Supabase when configured."}
+                      </p>
+                    </div>
+                  )}
+
+                  {poll?.status === "completed" && hasUnanalyzedFiles && (
+                    <div className="flex items-start gap-sm rounded-lg border border-outline-variant bg-surface-container-high px-sm py-xs">
+                      <Icon name="add_photo_alternate" className="mt-0.5 shrink-0 text-primary" />
+                      <p className="text-label-md text-on-surface-variant">
+                        Batch complete. Upload more photos, then run analysis again — new rows append to your CSV and Supabase.
                       </p>
                     </div>
                   )}
@@ -680,21 +779,14 @@ export default function Home() {
                     </span>
                   </button>
 
-                  {sessionFinished && (
+                  {(sessionFinished || (poll?.status === "completed" && hasUnanalyzedFiles)) && (
                     <button
                       type="button"
-                      onClick={() => {
-                        setPoll(null);
-                        setJobId(null);
-                        setSubmitting(false);
-                        setStopping(false);
-                        stopPolling();
-                        savedHistoryRef.current = false;
-                      }}
+                      onClick={clearAnalysisState}
                       className="flex w-full items-center justify-center space-x-sm rounded-xl border border-outline-variant py-3 font-mono text-label-md text-on-surface-variant hover:bg-surface-container-high"
                     >
                       <Icon name="refresh" />
-                      <span>Run again</span>
+                      <span>Clear results &amp; re-analyze all</span>
                     </button>
                   )}
                 </div>
