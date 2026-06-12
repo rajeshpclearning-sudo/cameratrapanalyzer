@@ -78,6 +78,8 @@ export default function Home() {
   } | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const savedHistoryRef = useRef(false);
+  const completedByNameRef = useRef(completedByName);
+  completedByNameRef.current = completedByName;
   const folderInputRef = useRef<HTMLInputElement>(null);
   const filesInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
@@ -120,12 +122,28 @@ export default function Home() {
           selected: true,
         });
       }
-      const merged = [...prev, ...added];
+      let merged = [...prev, ...added];
       if (merged.length > MAX_FILES) {
         setError(`Maximum ${MAX_FILES} files; remove some before adding more.`);
-        return merged.slice(0, MAX_FILES);
+        merged = merged.slice(0, MAX_FILES);
+      } else {
+        setError(null);
       }
-      setError(null);
+
+      const hasPriorAnalysis =
+        Object.keys(completedByNameRef.current).length > 0;
+      if (added.length > 0 && hasPriorAnalysis) {
+        const addedIds = new Set(added.map((f) => f.id));
+        merged = merged.map((f) => ({
+          ...f,
+          selected: isFileAnalyzed(completedByNameRef.current[f.file.name])
+            ? false
+            : addedIds.has(f.id)
+              ? true
+              : f.selected,
+        }));
+      }
+
       return merged;
     });
   }, []);
@@ -426,6 +444,26 @@ export default function Home() {
     !hasUnanalyzedFiles;
   const canRunAnalysis =
     !submitting && !analysisRunning && unanalyzedSelected.length > 0;
+  const showAnalyzeButton = !submitting && !analysisRunning;
+  const analyzedCount = localFiles.filter((f) =>
+    isFileAnalyzed(completedByName[f.file.name]),
+  ).length;
+  const waitingCount = localFiles.length - analyzedCount;
+  const showBatchSummary =
+    !!poll &&
+    (submitting ||
+      analysisRunning ||
+      sessionFinished ||
+      (poll.status === "completed" && hasUnanalyzedFiles));
+  const analyzeButtonLabel = canRunAnalysis
+    ? analyzedCount > 0
+      ? `Analyze ${unanalyzedSelected.length} new photo${unanalyzedSelected.length === 1 ? "" : "s"}`
+      : "Run Analysis"
+    : hasUnanalyzedFiles
+      ? "Select new photo(s) to analyze"
+      : localFiles.length > 0
+        ? "All photos analyzed"
+        : "Run Analysis";
   const sessionStatusRaw = getSessionStatusDisplay(poll, submitting, stopping);
   const sessionStatus =
     sessionStatusRaw?.label === "Complete" && hasUnanalyzedFiles
@@ -637,6 +675,9 @@ export default function Home() {
                 </div>
                 {localFiles.length > 0 && (
                   <p className="font-mono text-label-md text-on-surface-variant">
+                    {analyzedCount > 0 || waitingCount > 0
+                      ? `${analyzedCount} analyzed · ${waitingCount} waiting · `
+                      : ""}
                     {selectedCount} of {localFiles.length} selected · results appear in the table as each photo is analyzed · click a row to preview
                   </p>
                 )}
@@ -685,20 +726,26 @@ export default function Home() {
                     )}
                   </div>
 
-                  {canRunAnalysis ? (
-                    <button
-                      type="button"
-                      onClick={() => void runAnalysis()}
-                      className="flex w-full items-center justify-center space-x-sm rounded-xl bg-primary py-4 text-headline-sm font-bold text-background shadow-lg shadow-primary/10 transition-all hover:brightness-110"
-                    >
-                      <Icon name="bolt" />
-                      <span>
-                        {Object.keys(completedByName).length > 0
-                          ? `Analyze ${unanalyzedSelected.length} new photo${unanalyzedSelected.length === 1 ? "" : "s"}`
-                          : "Run Analysis"}
-                      </span>
-                    </button>
-                  ) : (submitting || analysisRunning || sessionFinished) && poll ? (
+                  {showAnalyzeButton && (
+                    <>
+                      <button
+                        type="button"
+                        disabled={!canRunAnalysis}
+                        onClick={() => void runAnalysis()}
+                        className="flex w-full items-center justify-center space-x-sm rounded-xl bg-primary py-4 text-headline-sm font-bold text-background shadow-lg shadow-primary/10 transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Icon name="bolt" />
+                        <span>{analyzeButtonLabel}</span>
+                      </button>
+                      {hasUnanalyzedFiles && !canRunAnalysis && (
+                        <p className="text-label-md text-on-surface-variant">
+                          Check the box next to each new photo in the table above, then click analyze.
+                        </p>
+                      )}
+                    </>
+                  )}
+
+                  {showBatchSummary && (
                     <div className="rounded-xl border border-outline-variant bg-surface-dim p-sm">
                       <div className="flex items-center justify-between gap-sm">
                         <div className="flex items-center gap-xs">
@@ -720,7 +767,7 @@ export default function Home() {
                         </p>
                       )}
                     </div>
-                  ) : null}
+                  )}
 
                   {showProgress && poll.stats && (
                     <p className="font-mono text-[10px] text-on-surface-variant">
@@ -779,15 +826,20 @@ export default function Home() {
                     </span>
                   </button>
 
-                  {(sessionFinished || (poll?.status === "completed" && hasUnanalyzedFiles)) && (
-                    <button
-                      type="button"
-                      onClick={clearAnalysisState}
-                      className="flex w-full items-center justify-center space-x-sm rounded-xl border border-outline-variant py-3 font-mono text-label-md text-on-surface-variant hover:bg-surface-container-high"
-                    >
-                      <Icon name="refresh" />
-                      <span>Clear results &amp; re-analyze all</span>
-                    </button>
+                  {Object.keys(completedByName).length > 0 && (
+                    <div className="space-y-xs">
+                      <button
+                        type="button"
+                        onClick={clearAnalysisState}
+                        className="flex w-full items-center justify-center space-x-sm rounded-xl border border-error/30 py-3 font-mono text-label-md text-error hover:bg-error/10"
+                      >
+                        <Icon name="refresh" />
+                        <span>Clear results &amp; re-analyze all</span>
+                      </button>
+                      <p className="text-center font-mono text-[10px] text-on-surface-variant">
+                        Only needed to wipe session memory and start over — not required to analyze new photos.
+                      </p>
+                    </div>
                   )}
                 </div>
 
