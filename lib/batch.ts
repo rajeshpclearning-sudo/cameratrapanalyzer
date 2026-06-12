@@ -12,6 +12,7 @@ import {
 import { extractDateTime } from "./exif";
 import { decodeToJpeg, isAcceptedImage } from "./image";
 import { getJob, isJobCancelRequested, updateJob } from "./jobs-store";
+import { persistSightings } from "./persist-sightings";
 import {
   burstGapMs,
   emptyFrameRow,
@@ -317,6 +318,8 @@ function finalizeCancelled(
     csvContent: buildCsv([...existingRows, ...newRows]),
     downloadFilename,
   });
+
+  void persistSightings(jobId, newRows);
 }
 
 export function startBatch(input: BatchInput): void {
@@ -385,6 +388,8 @@ export function startBatch(input: BatchInput): void {
       csvContent,
       downloadFilename,
     });
+
+    void persistSightings(jobId, newRows);
   })().catch((err) => {
     const message = err instanceof Error ? err.message : String(err);
     updateJob(jobId, {

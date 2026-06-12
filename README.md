@@ -243,7 +243,7 @@ Note: Job progress is stored in memory (single instance). Restarts clear in-flig
 
 ## Local MVP — developer setup
 
-Runnable **local flow** — no Google sign-in, no database. Pick images on your machine, analyze via OpenAI, download (or append to) a CSV.
+Runnable **local flow** — no Google sign-in, no app login. Pick images on your machine, analyze via OpenAI, download (or append to) a CSV. Optionally copy each new analysis row to your personal **Supabase** database (server-side only; see below).
 
 ### Prerequisites
 
@@ -262,12 +262,84 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+### Troubleshooting local dev
+
+If the page shows a **Runtime Error** (for example React error #299 or a webpack crash), the dev cache is often stale — especially after running `npm run build` while `npm run dev` is still running.
+
+1. Stop the dev server (`Ctrl+C` in the terminal).
+2. Clear the cache and restart:
+
+```bash
+npm run dev:clean
+```
+
+3. Hard-refresh the browser (`Cmd+Shift+R` on Mac, `Ctrl+Shift+R` on Windows).
+4. If the error persists only in Cursor’s built-in browser, try **Chrome or Safari** — some browser extensions inject scripts that can trigger React #299 on a broken page.
+
 ### Usage
 
 1. **Select images** — folder picker or individual files (JPEG, PNG, WebP, HEIC; max 50 per batch). Click a row to preview.
 2. **Optional existing log** — upload a `Camera_Trap_Analysis*.csv` to **append** new rows (header must match spec below).
 3. **Run analysis** — progress per file; uses EXIF for date/time when available.
 4. **Download CSV** — new file `Camera_Trap_Analysis_YYYY-MM-DD.csv`, or same name as the uploaded log when appending.
+5. **Optional Supabase** — when configured, each **newly analyzed** row in a finished job is inserted into `camera_trap_sightings` (rows from an uploaded existing CSV are not re-inserted).
+
+### Optional: Supabase backup (personal, no login)
+
+No sign-in in the app. Your Next.js server writes to Supabase using a secret key in `.env.local`.
+
+**Option A — from Cursor (Supabase MCP):**
+
+1. Create a [personal access token](https://supabase.com/dashboard/account/tokens) (one-time “login” for Cursor — not your app).
+2. **Cursor → Settings → MCP → supabase** — if you see `SUPABASE_ACCESS_TOKEN`, paste the `sbp_...` token there. Toggle **supabase** off, then on. Fully restart Cursor if tools still say Unauthorized.
+3. Ask the agent: *Create project camera-trap in Mumbai and run supabase/schema.sql.*
+
+**MCP looks green but tools fail?** The server can run without a valid token. The green dot only means the MCP process started; Supabase API calls need the `sbp_...` token in that server’s env (step 2).
+
+**Option B — one command:**
+
+```bash
+# Token from https://supabase.com/dashboard/account/tokens
+SUPABASE_ACCESS_TOKEN=sbp_... npm run setup:supabase
+```
+
+Creates project `camera-trap` in Mumbai (`ap-south-1`) and runs [`supabase/schema.sql`](supabase/schema.sql).
+
+**Option C — Supabase website:**
+
+1. Create a free project at [supabase.com](https://supabase.com).
+2. Open **SQL Editor** → **New query**, paste the contents of [`supabase/schema.sql`](supabase/schema.sql), and **Run**.
+3. Copy two values into `.env.local` (see below — Supabase moved them in the dashboard).
+4. Restart `npm run dev`.
+5. Run an analysis. In Supabase **Table Editor → camera_trap_sightings**, you should see one row per newly analyzed photo.
+
+Columns match the CSV: photo name, date, time, species, individual count, behavior, plus `job_id` and `created_at`. If env vars are missing, the app works as before (CSV only).
+
+#### Where to find URL and secret key (camera-trap project)
+
+**A — Project URL**
+
+1. In the left sidebar, click **Settings** (gear icon).
+2. Click **General** (under Configuration).
+3. Find **Project URL** (looks like `https://something.supabase.co`).
+4. Paste into `.env.local` as `SUPABASE_URL=...`
+
+Shortcut: while in your project, the browser address bar often looks like `.../project/abcdefghij.../` — your URL is `https://abcdefghij.supabase.co` (same `abcdefghij` as in that link).
+
+**B — Secret key for the app** (server writes rows; never put in the browser)
+
+On **Settings → API Keys** you may see two tabs:
+
+| Tab | What to use |
+|-----|-------------|
+| **Publishable and secret API keys** (default) | Under **Secret keys**, open **default** → click the **eye** icon → copy the key starting with `sb_secret_...` |
+| **Legacy anon, service_role API keys** | Copy **service_role** (long key starting with `eyJ...`) |
+
+Put either secret key in `.env.local` as `SUPABASE_SERVICE_ROLE_KEY=...` (the variable name is legacy; `sb_secret_...` works too).
+
+Do **not** use the **publishable** key (`sb_publishable_...`) — that one is for browsers only.
+
+**Security:** Never commit these keys to git. Personal use only — RLS is disabled on this table.
 
 ### CSV columns
 
@@ -288,6 +360,11 @@ Open [http://localhost:3000](http://localhost:3000).
 ### Optional env
 
 - `LLM_CONCURRENCY` — parallel LLM calls (default `2`)
+- `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` — optional; persist new analysis rows to Supabase (see above)
+
+### Cursor agent skills
+
+Project skills live in `.cursor/skills/`. **`sync-readme-on-change`** requires the agent to update this README whenever other project files change (same session). Attach or mention that skill when using Cursor on this repo.
 
 ---
 
@@ -511,6 +588,7 @@ Rough savings: downscaling 50–80% image tokens; skipping empty frames 30–70%
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | OAuth |
 | `NEXTAUTH_URL` | e.g. `https://<service>.up.railway.app` |
 | `OPENAI_API_KEY` or `GEMINI_API_KEY` | Vision LLM |
+| `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | Optional: persist analysis rows to external Supabase |
 
 ### OAuth redirect (Google Cloud Console)
 
@@ -553,8 +631,11 @@ Rough savings: downscaling 50–80% image tokens; skipping empty frames 30–70%
 │   ├── google.ts
 │   ├── exif.ts
 │   ├── llm/analyze.ts
+│   ├── supabase.ts               # Optional Supabase client (server)
+│   ├── persist-sightings.ts      # Insert analysis rows after jobs
 │   ├── sheets.ts                 # Resolve append vs create, append rows
 │   └── jobs.ts
+├── supabase/schema.sql           # One-time table setup for optional backup
 ├── prisma/schema.prisma
 ├── railway.toml
 └── .env.example
@@ -629,6 +710,7 @@ Rough savings: downscaling 50–80% image tokens; skipping empty frames 30–70%
 ## Implementation todos
 
 - [x] Local MVP + Path A: HEIC, thumbnails, preview, log library, empty/burst optimizations
+- [x] Optional Supabase persistence for analysis rows (no app auth)
 - [x] Railway deploy files (`railway.toml`, health check)
 - [ ] Document GCP setup (Drive, Sheets, OAuth, redirect URIs)
 - [ ] Google OAuth + Prisma on Railway Postgres
