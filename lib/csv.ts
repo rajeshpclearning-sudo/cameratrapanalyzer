@@ -1,3 +1,4 @@
+import { parseSightingsFile } from "./parse-sightings-file";
 import { CSV_HEADER, type CsvRow } from "./types";
 
 export function defaultCsvFilename(): string {
@@ -28,75 +29,9 @@ export function buildCsv(rows: CsvRow[]): string {
   return lines.join("\n") + "\n";
 }
 
-function normalizeHeader(cell: string): string {
-  return cell.trim().replace(/^"|"$/g, "");
-}
-
-function parseCsvLine(line: string): string[] {
-  const result: string[] = [];
-  let current = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (inQuotes) {
-      if (ch === '"' && line[i + 1] === '"') {
-        current += '"';
-        i++;
-      } else if (ch === '"') {
-        inQuotes = false;
-      } else {
-        current += ch;
-      }
-    } else if (ch === '"') {
-      inQuotes = true;
-    } else if (ch === ",") {
-      result.push(current);
-      current = "";
-    } else {
-      current += ch;
-    }
-  }
-  result.push(current);
-  return result;
-}
-
 export function parseExistingCsv(buffer: Buffer): {
   rows: CsvRow[];
   filenameHint?: string;
 } {
-  const text = buffer.toString("utf-8").replace(/^\uFEFF/, "");
-  const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
-  if (lines.length === 0) {
-    return { rows: [] };
-  }
-
-  const headerCells = parseCsvLine(lines[0]).map(normalizeHeader);
-  const expected = [...CSV_HEADER];
-  const headerOk =
-    headerCells.length === expected.length &&
-    headerCells.every((h, i) => h === expected[i]);
-
-  if (!headerOk) {
-    throw new Error(
-      `CSV header must be: ${expected.join(", ")}`,
-    );
-  }
-
-  const rows: CsvRow[] = [];
-  for (let i = 1; i < lines.length; i++) {
-    const cells = parseCsvLine(lines[i]);
-    if (cells.length === 0 || cells.every((c) => !c.trim())) continue;
-    while (cells.length < 6) cells.push("");
-    rows.push([
-      cells[0] ?? "",
-      cells[1] ?? "",
-      cells[2] ?? "",
-      cells[3] ?? "",
-      cells[4] ?? "",
-      cells[5] ?? "",
-    ]);
-  }
-
-  return { rows };
+  return parseSightingsFile(buffer, "upload.csv");
 }

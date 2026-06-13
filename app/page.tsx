@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FileListTable } from "@/app/components/FileListTable";
+import { ImportLogView } from "@/app/components/ImportLogView";
 import { LogLibraryView } from "@/app/components/LogLibraryView";
 import { PreviewModal } from "@/app/components/PreviewModal";
 import {
@@ -17,7 +18,7 @@ const POLL_MS = 800;
 const ACCEPT =
   "image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif";
 
-type View = "analysis" | "library";
+type View = "analysis" | "library" | "import";
 
 type LocalFile = {
   id: string;
@@ -513,6 +514,10 @@ export default function Home() {
             <Icon name="database" />
             <span className="text-label-md">Log Library</span>
           </button>
+          <button type="button" onClick={() => setView("import")} className={navClass(view === "import")}>
+            <Icon name="cloud_upload" />
+            <span className="text-label-md">Import Log</span>
+          </button>
           <span className="flex cursor-not-allowed items-center space-x-sm rounded-xl px-sm py-3 text-on-surface-variant opacity-50">
             <Icon name="menu_book" />
             <span className="text-label-md">Species Guide</span>
@@ -548,10 +553,18 @@ export default function Home() {
             <div className="flex min-w-0 items-center gap-md">
               <div className="flex min-w-0 items-center space-x-md">
                 <span className="text-headline-sm text-on-surface-variant">
-                  {view === "analysis" ? "Camera Trap Session /" : "Log Library /"}
+                  {view === "analysis"
+                    ? "Camera Trap Session /"
+                    : view === "library"
+                      ? "Log Library /"
+                      : "Import Log /"}
                 </span>
                 <span className="truncate text-headline-sm font-bold text-primary">
-                  {view === "analysis" ? sessionLabel : "Saved runs"}
+                  {view === "analysis"
+                    ? sessionLabel
+                    : view === "library"
+                      ? "Saved runs"
+                      : "Past analysis"}
                 </span>
               </div>
               {view === "analysis" && sessionStatus && (
@@ -612,6 +625,8 @@ export default function Home() {
 
         {view === "library" ? (
           <LogLibraryView onOpenAnalysis={() => setView("analysis")} />
+        ) : view === "import" ? (
+          <ImportLogView />
         ) : (
           <>
             {error && (

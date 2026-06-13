@@ -38,6 +38,8 @@ Use this section to design screens in [Stitch](https://stitch.withgoogle.com). I
 | Screen | Status | Purpose |
 |--------|--------|---------|
 | **Home / Analyze** | Built (local MVP) | Single scrollable page: pick files, optional CSV, run job, progress, download |
+| **Import Log** | Built | Upload past analysis (.xlsx, .xls, .csv) directly to Supabase — no photos required |
+| **Log Library** | Built | Browser localStorage history of past analysis runs (up to 30) |
 | **Sign in** | Planned | Google OAuth; explain Drive + Sheets permissions |
 | **Dashboard / Select from Drive** | Planned | Paste or browse folder ID; grid of images with checkboxes and thumbnails |
 | **Output target** | Planned | Show resolved Sheet (append vs new); optional override picker |
@@ -172,6 +174,7 @@ Each analyzed photo becomes **one row**. Designers can mock this as a table or G
 | HEIC / HEIF upload (server converts to JPEG) | Done |
 | Thumbnails + click row to **preview** image and results | Done |
 | **Log Library** (browser localStorage, up to 30 runs) | Done |
+| **Import Log** — Excel/CSV upload to Supabase (sidebar) | Done |
 | **Empty-frame skip** (no LLM on uniform frames) | Done |
 | **Burst deduplication** (shots within 2s share one LLM call) | Done |
 | Railway deploy config (`railway.toml`, `/api/health`) | Done |
@@ -289,6 +292,7 @@ npm run dev:clean
 3. **Run analysis** — progress per file; uses EXIF for date/time when available. After a batch finishes, **upload more photos** in the same session — new uploads are auto-selected, already-analyzed photos are skipped, and **Analyze N new photo(s)** only processes waiting rows; results append to the session CSV (and Supabase when configured). Use **Clear results & re-analyze all** only to wipe session memory and rerun everything.
 4. **Download CSV** — new file `Camera_Trap_Analysis_YYYY-MM-DD.csv`, or same name as the uploaded log when appending.
 5. **Optional Supabase** — when configured, each **newly analyzed** row in a finished job is inserted into `camera_trap_sightings` (rows from an uploaded existing CSV or earlier session rows are not re-inserted).
+6. **Import Log** (sidebar) — upload a past analysis file in **Excel** (`.xlsx`, `.xls`) or **CSV** with the same column header as below. Preview rows, then **Import to Supabase**. If this browser imported a file with the **same filename** before, a warning appears and you must click **Import anyway** (tracking is per-browser in localStorage, not across devices). Re-importing still adds duplicate rows to Supabase.
 
 ### Optional: Supabase backup (personal, no login)
 
@@ -347,10 +351,11 @@ Do **not** use the **publishable** key (`sb_publishable_...`) — that one is fo
 
 **Security:** Never commit these keys to git. Personal use only — RLS is disabled on this table.
 
-### CSV columns
+### CSV / Excel columns
 
 `Photo name,Date,Timestamp,Species,# Individuals,Behavior`
 
+- Used for analysis CSV download, optional append log, and **Import Log** (first worksheet row for Excel).
 - **No animal:** describe scene in Species; Behavior `N/A`; count `0`.
 - **Humans:** Species `Human`; appropriate behavior.
 - See [Google Sheet output](#google-sheet-output) for full rules (same semantics as future Sheets export).
@@ -360,6 +365,7 @@ Do **not** use the **publishable** key (`sb_publishable_...`) — that one is fo
 | Method | Path | Purpose |
 |--------|------|---------|
 | `POST` | `/api/jobs` | `multipart/form-data`: `files[]`, optional `existingCsv` |
+| `POST` | `/api/import-sightings` | `multipart/form-data`: `file`; optional `dryRun=true` for preview only |
 | `GET` | `/api/jobs/[id]` | Poll job status |
 | `GET` | `/api/jobs/[id]/download` | Download CSV when complete |
 
