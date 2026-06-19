@@ -8,8 +8,9 @@ create table if not exists public.camera_trap_sightings (
   sighting_date text,
   sighting_time text,
   species text not null,
-  individual_count integer not null default 0,
+  individual_count text not null default '0',
   behavior text not null,
+  status text not null default 'Success',
   created_at timestamptz not null default now()
 );
 

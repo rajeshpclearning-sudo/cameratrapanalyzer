@@ -7,8 +7,7 @@ import {
   recordImport,
   type ImportHistoryEntry,
 } from "@/lib/import-history";
-import { CSV_HEADER, type CsvRow } from "@/lib/types";
-import type { PersistSightingsResult } from "@/lib/persist-sightings";
+import { CSV_HEADER, type CsvRow, type PersistSightingsResult } from "@/lib/types";
 
 function Icon({ name, className = "" }: { name: string; className?: string }) {
   return (
@@ -74,13 +73,13 @@ export function ImportLogView() {
         method: "POST",
         body: form,
       });
-      const parsed = await readApiJson<PreviewResponse>(res);
+      const parsed = await readApiJson<PreviewResponse & { error?: string }>(res);
       if ("error" in parsed) {
         setError(parsed.error);
         return;
       }
-      if (!res.ok) {
-        setError("Failed to preview file");
+      if (!res.ok || parsed.data.error) {
+        setError(parsed.data.error ?? "Failed to preview file");
         return;
       }
       setPreview(parsed.data);
@@ -106,13 +105,13 @@ export function ImportLogView() {
         method: "POST",
         body: form,
       });
-      const parsed = await readApiJson<ImportResponse>(res);
+      const parsed = await readApiJson<ImportResponse & { error?: string }>(res);
       if ("error" in parsed) {
         setError(parsed.error);
         return;
       }
-      if (!res.ok) {
-        setError("Failed to import file");
+      if (!res.ok || parsed.data.error) {
+        setError(parsed.data.error ?? "Failed to import file");
         return;
       }
       const data = parsed.data;

@@ -3,12 +3,23 @@ import type { LlmAnalysis } from "../types";
 
 const SYSTEM_PROMPT = `You analyze forest camera-trap photographs from India.
 Return JSON only. Use common English species names (no scientific names).
-Count only visible individuals. Behavior must be one of: foraging, moving, standing, resting, drinking, running, unknown, N/A.
+Count only visible individuals.
 
-Rules:
-- If no animal is visible: set has_animal false, species_common to a short scene description (e.g. "Empty trail - vegetation only"), behavior N/A, individual_count 0.
-- If humans are visible: has_human true, species_common "Human" (or "Human (N individuals)" if count > 1), set behavior appropriately.
-- If animal present but unclear: species_common "Unidentified", behavior unknown.
+When an animal IS visible:
+- species_common: common name (or "Human", or "Unidentified" if unclear)
+- individual_count: integer count of visible animals
+- individuals_description: same count as a string (e.g. "2")
+- behavior: one of foraging, moving, standing, resting, drinking, running, unknown
+
+When NO animal is visible:
+- has_animal: false
+- species_common: descriptive scene text starting with "No animal –" (what is seen in the photo)
+- individual_count: 0
+- individuals_description: short text describing absence (e.g. "No animals visible")
+- behavior: brief scene/activity description (what is seen — not "N/A" or "Not Applicable")
+
+Other rules:
+- If humans are visible: has_human true, species_common "Human" (or "Human (N individuals)" if count > 1)
 - Do not guess rare species when uncertain.`;
 
 const responseSchema = {
@@ -21,25 +32,15 @@ const responseSchema = {
       properties: {
         species_common: { type: "string" },
         individual_count: { type: "integer" },
-        behavior: {
-          type: "string",
-          enum: [
-            "foraging",
-            "moving",
-            "standing",
-            "resting",
-            "drinking",
-            "running",
-            "unknown",
-            "N/A",
-          ],
-        },
+        individuals_description: { type: "string" },
+        behavior: { type: "string" },
         has_animal: { type: "boolean" },
         has_human: { type: "boolean" },
       },
       required: [
         "species_common",
         "individual_count",
+        "individuals_description",
         "behavior",
         "has_animal",
         "has_human",
@@ -83,6 +84,28 @@ function getModel(): string {
   return "gpt-4o-mini";
 }
 
+function normalizeNoAnimalAnalysis(parsed: LlmAnalysis): LlmAnalysis {
+  if (!parsed.individuals_description?.trim()) {
+    parsed.individuals_description = "No animals visible";
+  }
+  if (!parsed.behavior?.trim() || parsed.behavior === "N/A") {
+    parsed.behavior = "Static view; no animal activity observed";
+  }
+  const species = parsed.species_common.trim();
+  if (!species.toLowerCase().startsWith("no animal")) {
+    parsed.species_common = species
+      ? `No animal – ${species}`
+      : "No animal – empty scene";
+  }
+  parsed.individual_count = 0;
+  return parsed;
+}
+
+function normalizeAnimalAnalysis(parsed: LlmAnalysis): LlmAnalysis {
+  parsed.individuals_description = String(parsed.individual_count);
+  return parsed;
+}
+
 export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
   const base64 = jpegBuffer.toString("base64");
   const openai = getClient();
@@ -109,7 +132,7 @@ export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
       },
     ],
     response_format: responseSchema,
-    max_tokens: 300,
+    max_tokens: 400,
   });
 
   const content = response.choices[0]?.message?.content;
@@ -120,8 +143,9 @@ export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
   const parsed = JSON.parse(content) as LlmAnalysis;
 
   if (!parsed.has_animal) {
-    parsed.behavior = "N/A";
-    parsed.individual_count = 0;
+    normalizeNoAnimalAnalysis(parsed);
+  } else {
+    normalizeAnimalAnalysis(parsed);
   }
 
   if (parsed.has_human && !parsed.species_common.toLowerCase().includes("human")) {

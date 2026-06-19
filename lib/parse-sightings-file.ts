@@ -1,20 +1,63 @@
+import "server-only";
+
 import * as XLSX from "xlsx";
-import { CSV_HEADER, type CsvRow } from "./types";
+import { CSV_COL, CSV_HEADER, ROW_STATUS, type CsvRow } from "./types";
 
 const SUPPORTED_EXTENSIONS = [".csv", ".xlsx", ".xls"] as const;
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
+const COLUMN_COUNT = CSV_HEADER.length;
+
+/** Normalized header alias → column index */
+const HEADER_ALIASES: Record<string, number> = {
+  "photo name": CSV_COL.photoName,
+  date: CSV_COL.date,
+  timestamp: CSV_COL.timestamp,
+  "species name": CSV_COL.speciesName,
+  species: CSV_COL.speciesName,
+  "number of individuals": CSV_COL.individuals,
+  "# individuals": CSV_COL.individuals,
+  individuals: CSV_COL.individuals,
+  behavior: CSV_COL.behavior,
+  status: CSV_COL.status,
+};
+
+const REQUIRED_COLUMNS = [
+  CSV_COL.photoName,
+  CSV_COL.date,
+  CSV_COL.timestamp,
+  CSV_COL.speciesName,
+  CSV_COL.individuals,
+  CSV_COL.behavior,
+];
 
 function normalizeHeader(cell: string): string {
-  return String(cell ?? "").trim().replace(/^"|"$/g, "");
+  return String(cell ?? "")
+    .trim()
+    .replace(/^"|"$/g, "")
+    .toLowerCase();
 }
 
 function cellToString(cell: unknown): string {
   if (cell == null) return "";
   if (cell instanceof Date) {
+    const dd = String(cell.getDate());
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    const mmm = months[cell.getMonth()] ?? "Jan";
     const yyyy = cell.getFullYear();
-    const mm = String(cell.getMonth() + 1).padStart(2, "0");
-    const dd = String(cell.getDate()).padStart(2, "0");
-    return `${yyyy}-${mm}-${dd}`;
+    return `${dd}-${mmm}-${yyyy}`;
   }
   return String(cell).trim();
 }
@@ -51,7 +94,7 @@ function parseCsvLine(line: string): string[] {
 function matrixFromCsvBuffer(buffer: Buffer): string[][] {
   const text = buffer.toString("utf-8").replace(/^\uFEFF/, "");
   const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
-  return lines.map((line) => parseCsvLine(line).map(normalizeHeader));
+  return lines.map((line) => parseCsvLine(line));
 }
 
 function matrixFromExcelBuffer(buffer: Buffer): string[][] {
@@ -71,34 +114,57 @@ function matrixFromExcelBuffer(buffer: Buffer): string[][] {
   );
 }
 
+function mapHeaderRow(headerCells: string[]): Map<number, number> {
+  const mapping = new Map<number, number>();
+
+  headerCells.forEach((cell, fileColIndex) => {
+    const key = normalizeHeader(cell);
+    if (!key) return;
+    const colIndex = HEADER_ALIASES[key];
+    if (colIndex === undefined) return;
+    if (!mapping.has(colIndex)) {
+      mapping.set(colIndex, fileColIndex);
+    }
+  });
+
+  const missing = REQUIRED_COLUMNS.filter((col) => !mapping.has(col));
+  if (missing.length > 0) {
+    const names = missing.map((i) => CSV_HEADER[i]);
+    throw new Error(`Missing required column(s): ${names.join(", ")}`);
+  }
+
+  return mapping;
+}
+
+function rowFromMappedCells(
+  cells: string[],
+  mapping: Map<number, number>,
+): CsvRow {
+  const row = Array.from({ length: COLUMN_COUNT }, () => "") as string[];
+
+  mapping.forEach((fileColIndex, colIndex) => {
+    row[colIndex] = cells[fileColIndex] ?? "";
+  });
+
+  if (!row[CSV_COL.status]?.trim()) {
+    row[CSV_COL.status] = ROW_STATUS.success;
+  }
+
+  return row as CsvRow;
+}
+
 export function rowsFromMatrix(matrix: string[][]): CsvRow[] {
   if (matrix.length === 0) {
     return [];
   }
 
-  const headerCells = matrix[0].map(normalizeHeader);
-  const expected = [...CSV_HEADER];
-  const headerOk =
-    headerCells.length >= expected.length &&
-    expected.every((h, i) => headerCells[i] === h);
-
-  if (!headerOk) {
-    throw new Error(`Header must be: ${expected.join(", ")}`);
-  }
-
+  const mapping = mapHeaderRow(matrix[0]);
   const rows: CsvRow[] = [];
+
   for (let i = 1; i < matrix.length; i++) {
     const cells = [...matrix[i]];
-    if (cells.length === 0 || cells.every((c) => !c.trim())) continue;
-    while (cells.length < 6) cells.push("");
-    rows.push([
-      cells[0] ?? "",
-      cells[1] ?? "",
-      cells[2] ?? "",
-      cells[3] ?? "",
-      cells[4] ?? "",
-      cells[5] ?? "",
-    ]);
+    if (cells.length === 0 || cells.every((c) => !String(c).trim())) continue;
+    rows.push(rowFromMappedCells(cells, mapping));
   }
 
   return rows;
@@ -112,9 +178,7 @@ function extensionOf(filename: string): string {
 
 function isExcelBuffer(buffer: Buffer): boolean {
   if (buffer.length < 4) return false;
-  // ZIP (xlsx)
   if (buffer[0] === 0x50 && buffer[1] === 0x4b) return true;
-  // OLE (xls)
   if (
     buffer[0] === 0xd0 &&
     buffer[1] === 0xcf &&
@@ -142,7 +206,12 @@ export function parseSightingsFile(
     ext === ".xls" ||
     (ext === "" && isExcelBuffer(buffer));
 
-  if (ext && !SUPPORTED_EXTENSIONS.includes(ext as (typeof SUPPORTED_EXTENSIONS)[number])) {
+  if (
+    ext &&
+    !SUPPORTED_EXTENSIONS.includes(
+      ext as (typeof SUPPORTED_EXTENSIONS)[number],
+    )
+  ) {
     throw new Error(
       `Unsupported file type. Use ${SUPPORTED_EXTENSIONS.join(", ")}`,
     );
@@ -153,4 +222,11 @@ export function parseSightingsFile(
     : matrixFromCsvBuffer(buffer);
 
   return { rows: rowsFromMatrix(matrix) };
+}
+
+export function parseExistingCsv(buffer: Buffer): {
+  rows: CsvRow[];
+  filenameHint?: string;
+} {
+  return parseSightingsFile(buffer, "upload.csv");
 }

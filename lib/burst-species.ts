@@ -7,10 +7,25 @@ export function isUnidentifiedSpecies(species: string): boolean {
 export function isEmptySpecies(species: string): boolean {
   const s = species.toLowerCase();
   return (
+    s.startsWith("no animal") ||
+    s.includes("no animal") ||
     s.includes("empty trail") ||
     s.includes("vegetation only") ||
     s.includes("low image variation")
   );
+}
+
+function isNonAnimalIndividuals(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  if (!t || t === "n/a" || t === "not applicable") return true;
+  if (t.includes("no animal")) return true;
+  const n = parseInt(text, 10);
+  return !Number.isFinite(n) || n <= 0;
+}
+
+function isNonAnimalBehavior(behavior: string): boolean {
+  const b = behavior.trim().toLowerCase();
+  return b === "n/a" || b === "not applicable";
 }
 
 export function isConfidentSpecies(row: CsvRow): boolean {
@@ -22,7 +37,9 @@ export function rowHasAnimal(row: CsvRow): boolean {
   if (isEmptySpecies(row[3])) return false;
   const count = parseInt(row[4], 10);
   if (Number.isFinite(count) && count > 0) return true;
-  if (row[5] === "N/A") return false;
+  if (isNonAnimalIndividuals(row[4]) || isNonAnimalBehavior(row[5])) {
+    return false;
+  }
   return isUnidentifiedSpecies(row[3]);
 }
 
@@ -34,7 +51,15 @@ export function findBurstAnchorRow(rows: (CsvRow | null)[]): CsvRow | null {
 }
 
 export function inferSpeciesFromAnchor(row: CsvRow, anchor: CsvRow): CsvRow {
-  return [row[0], row[1], row[2], anchor[3], row[4], row[5]];
+  return [
+    row[0],
+    row[1],
+    row[2],
+    anchor[3],
+    row[4],
+    row[5],
+    row[6] ?? anchor[6],
+  ];
 }
 
 /**

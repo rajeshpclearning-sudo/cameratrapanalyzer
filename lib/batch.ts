@@ -1,3 +1,5 @@
+import "server-only";
+
 import {
   isUnidentifiedSpecies,
   reconcileBurstSpecies,
@@ -7,8 +9,8 @@ import {
   buildCsv,
   defaultCsvFilename,
   filenameFromUpload,
-  parseExistingCsv,
 } from "./csv";
+import { parseExistingCsv } from "./parse-sightings-file";
 import { extractDateTime } from "./exif";
 import { decodeToJpeg, isAcceptedImage } from "./image";
 import { getJob, isJobCancelRequested, updateJob } from "./jobs-store";
@@ -20,6 +22,7 @@ import {
   isLikelyEmptyFrame,
 } from "./preprocess";
 import type { CsvRow, FileJobState, LlmAnalysis } from "./types";
+import { ROW_STATUS } from "./types";
 
 const SKIP_EMPTY = process.env.SKIP_EMPTY_FRAMES !== "false";
 const DEDUPE_BURST = process.env.DEDUPE_BURST !== "false";
@@ -42,8 +45,9 @@ function llmToRow(
     date,
     timestamp,
     analysis.species_common,
-    String(analysis.individual_count),
+    analysis.individuals_description,
     analysis.behavior,
+    ROW_STATUS.success,
   ];
 }
 
@@ -53,7 +57,15 @@ function copyAnalysisRow(
   timestamp: string,
   source: CsvRow,
 ): CsvRow {
-  return [photoName, date, timestamp, source[3], source[4], source[5]];
+  return [
+    photoName,
+    date,
+    timestamp,
+    source[3],
+    source[4],
+    source[5],
+    source[6] ?? ROW_STATUS.success,
+  ];
 }
 
 function getConcurrency(): number {

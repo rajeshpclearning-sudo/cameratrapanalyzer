@@ -78,11 +78,12 @@ export function PreviewModal({
           <table className="w-full border-collapse text-label-md">
             <tbody>
               {[
-                ["Species", row[3]],
-                ["Individuals", row[4]],
+                ["Species Name", row[3]],
+                ["Number of Individuals", row[4]],
                 ["Behavior", row[5]],
                 ["Date", row[1]],
                 ["Time", row[2]],
+                ["Status", row[6]],
               ].map(([label, value]) => (
                 <tr key={label} className="border-b border-outline-variant/30">
                   <td className="py-2 pr-md text-on-surface-variant">{label}</td>

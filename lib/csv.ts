@@ -1,4 +1,3 @@
-import { parseSightingsFile } from "./parse-sightings-file";
 import { CSV_HEADER, type CsvRow } from "./types";
 
 export function defaultCsvFilename(): string {
@@ -27,11 +26,4 @@ export function buildCsv(rows: CsvRow[]): string {
     ...rows.map((row) => row.map(escapeField).join(",")),
   ];
   return lines.join("\n") + "\n";
-}
-
-export function parseExistingCsv(buffer: Buffer): {
-  rows: CsvRow[];
-  filenameHint?: string;
-} {
-  return parseSightingsFile(buffer, "upload.csv");
 }

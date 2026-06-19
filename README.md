@@ -137,16 +137,17 @@ Each analyzed photo becomes **one row**. Designers can mock this as a table or G
 
 | Column | Example | Notes |
 |--------|---------|-------|
-| Photo name | `IMG_0421.JPG` | Filename |
-| Date | `2026-03-15` | From EXIF; not AI |
-| Timestamp | `04:32:11` | 24h |
-| Species | `Sambar deer` or `Empty trail - vegetation only` | Common name only; scene description if no animal |
-| # Individuals | `2` or `0` | Integer |
-| Behavior | `moving` or `N/A` | Enum: foraging, moving, standing, resting, drinking, running, unknown, N/A |
+| Photo Name | `IMG_0421.JPG` | Filename |
+| Date | `18-Feb-2026` | From EXIF; not AI |
+| Timestamp | `2:39 PM` | 12-hour clock |
+| Species Name | `Sambar deer` or `No animal – empty forest floor` | Common name or scene description |
+| Number of Individuals | `2` or `No animals visible` | Count when animal present; descriptive text when none |
+| Behavior | `moving` or `Static view; vegetation only` | Activity enum or scene description when no animal |
+| Status | `Success` | `Success` or `Error` |
 
 **Business rules for content design**
 
-- No animal → Species = short scene description; Behavior = **N/A**; count = **0**.
+- No animal → **Species Name** describes the scene (`No animal – …`); **Number of Individuals** and **Behavior** use short descriptive text (not "Not Applicable").
 - Humans → Species = **Human** (optionally “Human (N individuals)”).
 - Unclear → Species = **Unidentified**; avoid rare-species guesses.
 
@@ -323,7 +324,9 @@ Creates project `camera-trap` in Mumbai (`ap-south-1`) and runs [`supabase/schem
 4. Restart `npm run dev`.
 5. Run an analysis. In Supabase **Table Editor → camera_trap_sightings**, you should see one row per newly analyzed photo.
 
-Columns match the CSV: photo name, date, time, species, individual count, behavior, plus `job_id` and `created_at`. If env vars are missing, the app works as before (CSV only).
+Columns match the log sheet: photo name, date, time, species name, number of individuals, behavior, status, plus `job_id` and `created_at`. If env vars are missing, the app works as before (CSV only).
+
+**Existing Supabase projects:** run [`supabase/migrations/002_align_log_columns.sql`](supabase/migrations/002_align_log_columns.sql) once (`individual_count` → text, add `status` column).
 
 #### Where to find URL and secret key (camera-trap project)
 
@@ -353,11 +356,13 @@ Do **not** use the **publishable** key (`sb_publishable_...`) — that one is fo
 
 ### CSV / Excel columns
 
-`Photo name,Date,Timestamp,Species,# Individuals,Behavior`
+`Photo Name,Date,Timestamp,Species Name,Number of Individuals,Behavior,Status`
 
 - Used for analysis CSV download, optional append log, and **Import Log** (first worksheet row for Excel).
-- **No animal:** describe scene in Species; Behavior `N/A`; count `0`.
-- **Humans:** Species `Human`; appropriate behavior.
+- **Import** also accepts legacy header names (`Photo name`, `Species`, `# Individuals`, etc.).
+- **Date** format: `18-Feb-2026`. **Timestamp**: `2:39 PM`.
+- **No animal:** Species Name, Number of Individuals, and Behavior all contain descriptive text about what is seen.
+- **Humans:** Species Name `Human`; appropriate behavior.
 - See [Google Sheet output](#google-sheet-output) for full rules (same semantics as future Sheets export).
 
 ### API (for reference)
@@ -415,13 +420,14 @@ Record what animals (or humans) crossed the camera trap by analyzing trap photos
 | Behavior | LLM: `foraging`, `moving`, `standing`, `resting`, `drinking`, `running`, `unknown`, etc. |
 
 **Header row (frozen):**  
-`Photo name | Date | Timestamp | Species | # Individuals | Behavior`
+`Photo Name | Date | Timestamp | Species Name | Number of Individuals | Behavior | Status`  
+(Same as current CSV export; see [CSV / Excel columns](#csv--excel-columns).)
 
 Optional later columns: `Job ID`, `Analyzed at`, `Confidence`, `Notes`, `Drive file link`.
 
 ### Rules (from project requirements)
 
-- **No animal:** Describe the photograph under **Species** (e.g. `Empty trail - vegetation only`). Set **Behavior** to `N/A` and **# Individuals** to `0`.
+- **No animal:** Descriptive text in **Species Name**, **Number of Individuals**, and **Behavior** (what is seen in the photo).
 - **Humans:** Species = `Human` (or `Human (N individuals)`); behavior as appropriate.
 - **Unclear / blurry:** Species = `Unidentified`; avoid guessing rare species.
 - **Append-only** — each run adds rows; do not overwrite prior surveys.

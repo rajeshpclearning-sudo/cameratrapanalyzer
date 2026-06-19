@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import { ROW_STATUS, type CsvRow } from "./types";
 
 const EMPTY_STDEV_THRESHOLD = parseFloat(
   process.env.EMPTY_STDEV_THRESHOLD ?? "12",
@@ -25,14 +26,15 @@ export function emptyFrameRow(
   photoName: string,
   date: string,
   timestamp: string,
-): [string, string, string, string, string, string] {
+): CsvRow {
   return [
     photoName,
     date,
     timestamp,
-    "Empty trail - low image variation",
-    "0",
-    "N/A",
+    "No animal – uniform frame; low image variation",
+    "No animals visible",
+    "Static view; no movement detected",
+    ROW_STATUS.success,
   ];
 }
 

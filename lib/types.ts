@@ -1,11 +1,23 @@
 export const CSV_HEADER = [
-  "Photo name",
+  "Photo Name",
   "Date",
   "Timestamp",
-  "Species",
-  "# Individuals",
+  "Species Name",
+  "Number of Individuals",
   "Behavior",
+  "Status",
 ] as const;
+
+/** Column indices for CsvRow tuples */
+export const CSV_COL = {
+  photoName: 0,
+  date: 1,
+  timestamp: 2,
+  speciesName: 3,
+  individuals: 4,
+  behavior: 5,
+  status: 6,
+} as const;
 
 export type CsvRow = [
   string,
@@ -14,22 +26,19 @@ export type CsvRow = [
   string,
   string,
   string,
+  string,
 ];
 
-export type Behavior =
-  | "foraging"
-  | "moving"
-  | "standing"
-  | "resting"
-  | "drinking"
-  | "running"
-  | "unknown"
-  | "N/A";
+export const ROW_STATUS = {
+  success: "Success",
+  error: "Error",
+} as const;
 
 export type LlmAnalysis = {
   species_common: string;
   individual_count: number;
-  behavior: Behavior;
+  individuals_description: string;
+  behavior: string;
   has_animal: boolean;
   has_human: boolean;
 };
@@ -65,6 +74,13 @@ export type JobStatus =
 export type JobSupabaseStatus = {
   saved: number;
   configured: boolean;
+  error?: string;
+};
+
+/** Result from persistSightings / import API (safe for client types). */
+export type PersistSightingsResult = {
+  configured: boolean;
+  inserted: number;
   error?: string;
 };
 

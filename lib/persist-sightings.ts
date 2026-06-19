@@ -1,22 +1,20 @@
-import { getSupabaseAdmin, isSupabaseConfigured } from "./supabase";
-import type { CsvRow } from "./types";
+import "server-only";
 
-export type PersistSightingsResult = {
-  configured: boolean;
-  inserted: number;
-  error?: string;
-};
+import { getSupabaseAdmin, isSupabaseConfigured } from "./supabase";
+import { CSV_COL, ROW_STATUS, type CsvRow, type PersistSightingsResult } from "./types";
+
+export type { PersistSightingsResult };
 
 function rowToRecord(jobId: string, row: CsvRow) {
-  const count = parseInt(row[4], 10);
   return {
     job_id: jobId,
-    photo_name: row[0],
-    sighting_date: row[1] || null,
-    sighting_time: row[2] || null,
-    species: row[3],
-    individual_count: Number.isFinite(count) ? count : 0,
-    behavior: row[5],
+    photo_name: row[CSV_COL.photoName],
+    sighting_date: row[CSV_COL.date] || null,
+    sighting_time: row[CSV_COL.timestamp] || null,
+    species: row[CSV_COL.speciesName],
+    individual_count: row[CSV_COL.individuals] || "0",
+    behavior: row[CSV_COL.behavior],
+    status: row[CSV_COL.status]?.trim() || ROW_STATUS.success,
   };
 }
 

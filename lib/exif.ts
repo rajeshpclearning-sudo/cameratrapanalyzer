@@ -5,16 +5,35 @@ export type DateTimeFields = {
   timestamp: string;
 };
 
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
 function formatFromDate(d: Date): DateTimeFields {
+  const dd = String(d.getDate());
+  const mmm = MONTHS[d.getMonth()] ?? "Jan";
   const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  const hh = String(d.getHours()).padStart(2, "0");
-  const min = String(d.getMinutes()).padStart(2, "0");
-  const ss = String(d.getSeconds()).padStart(2, "0");
+
+  let hours = d.getHours();
+  const minutes = d.getMinutes();
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  if (hours === 0) hours = 12;
+
   return {
-    date: `${yyyy}-${mm}-${dd}`,
-    timestamp: `${hh}:${min}:${ss}`,
+    date: `${dd}-${mmm}-${yyyy}`,
+    timestamp: `${hours}:${String(minutes).padStart(2, "0")} ${ampm}`,
   };
 }
 

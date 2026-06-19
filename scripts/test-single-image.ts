@@ -30,8 +30,9 @@ async function main(): Promise<void> {
     date,
     timestamp,
     analysis.species_common,
-    String(analysis.individual_count),
+    analysis.individuals_description,
     analysis.behavior,
+    "Success",
   ];
 
   const csv = buildCsv([row]);
