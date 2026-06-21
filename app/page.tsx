@@ -11,7 +11,9 @@ import {
 } from "@/lib/job-history";
 import { readApiJson } from "@/lib/api-client";
 import { getSessionStatusDisplay } from "@/lib/file-status-display";
+import { CSV_COL } from "@/lib/types";
 import type { CsvRow, FileJobState, JobPollResponse } from "@/lib/types";
+import { buildSpeciesTally } from "@/lib/species-tally";
 
 const MAX_FILES = 50;
 const POLL_MS = 800;
@@ -40,6 +42,7 @@ function Icon({ name, className = "" }: { name: string; className?: string }) {
     <span className={`material-symbols-outlined ${className}`}>{name}</span>
   );
 }
+
 
 function isFileAnalyzed(state?: FileJobState): boolean {
   return state?.status === "done" || state?.status === "skipped";
@@ -471,6 +474,7 @@ export default function Home() {
       ? null
       : sessionStatusRaw;
   const csvReady = poll?.csvReady && jobId;
+  const speciesTally = poll ? buildSpeciesTally(poll.files) : [];
 
   const sessionLabel =
     localFiles.length > 0
@@ -872,6 +876,25 @@ export default function Home() {
                         : "Download Result (.CSV)"}
                     </span>
                   </button>
+
+                  {speciesTally.length > 0 && (
+                    <div className="rounded-xl border border-outline-variant bg-surface-dim p-sm">
+                      <p className="mb-xs font-mono text-[10px] uppercase text-on-surface-variant">
+                        Species found
+                      </p>
+                      <div className="flex flex-wrap gap-xs">
+                        {speciesTally.map(({ species, count }) => (
+                          <span
+                            key={species}
+                            className="inline-flex items-center gap-1 rounded-full border border-outline-variant bg-surface-container px-sm py-0.5 font-mono text-[10px]"
+                          >
+                            <span className="text-on-surface">{species}</span>
+                            <span className="font-bold text-primary">×{count}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {Object.keys(completedByName).length > 0 && (
                     <div className="space-y-xs">

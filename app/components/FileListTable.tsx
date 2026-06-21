@@ -2,8 +2,6 @@
 
 import { getAnalysisDisplay } from "@/lib/analysis-display";
 import { getFileStatusDisplay } from "@/lib/file-status-display";
-import { formatFileSize } from "@/lib/format";
-import { CSV_HEADER } from "@/lib/types";
 import type { FileJobState, JobPollResponse } from "@/lib/types";
 
 export type LocalFileItem = {
@@ -43,7 +41,6 @@ export function FileListTable({
   onToggleFile,
   onOpenPreview,
 }: Props) {
-  const analysisHeaders = CSV_HEADER.slice(1);
   const jobStatus = poll?.status;
 
   return (
@@ -64,20 +61,17 @@ export function FileListTable({
               </th>
               <th className={`${thClass} w-12`} aria-hidden />
               <th className={`${thClass} min-w-[140px]`}>Filename</th>
-              <th className={`${thClass} min-w-[72px]`}>Size</th>
               <th className={`${thClass} min-w-[96px]`}>Status</th>
-              {analysisHeaders.map((label) => (
-                <th key={label} className={`${thClass} min-w-[100px]`}>
-                  {label}
-                </th>
-              ))}
+              <th className={`${thClass} min-w-[100px]`}>Date</th>
+              <th className={`${thClass} min-w-[100px]`}>Timestamp</th>
+              <th className={`${thClass} min-w-[140px]`}>Species Name</th>
             </tr>
           </thead>
           <tbody>
             {localFiles.length === 0 ? (
               <tr>
                 <td
-                  colSpan={5 + analysisHeaders.length}
+                  colSpan={7}
                   className="px-md py-lg text-center text-label-md text-on-surface-variant"
                 >
                   No images yet. Upload a folder or individual files to begin.
@@ -128,9 +122,6 @@ export function FileListTable({
                     <td className={`${tdClass} max-w-[200px] truncate font-medium text-on-surface`}>
                       {item.file.name}
                     </td>
-                    <td className={`${tdClass} text-on-surface-variant`}>
-                      {formatFileSize(item.file.size)}
-                    </td>
                     <td className={tdClass}>
                       <span
                         className={`inline-flex items-center gap-1 rounded px-2 py-0.5 font-mono text-[10px] uppercase ${statusDisplay.badgeClass}`}
@@ -155,14 +146,6 @@ export function FileListTable({
                       title={isError ? analysis.species : undefined}
                     >
                       {analysis.species}
-                    </td>
-                    <td className={`${tdClass} text-on-surface-variant`}>
-                      {analysis.individuals}
-                    </td>
-                    <td
-                      className={`${tdClass} max-w-[120px] truncate capitalize text-on-surface-variant`}
-                    >
-                      {analysis.behavior}
                     </td>
                   </tr>
                 );
