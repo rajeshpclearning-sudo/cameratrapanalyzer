@@ -80,6 +80,8 @@ export default function Home() {
     content: string;
     filename: string;
   } | null>(null);
+  /** CSV returned from Vercel sync POST (in-memory job may not be pollable). */
+  const [syncCsvContent, setSyncCsvContent] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const savedHistoryRef = useRef(false);
   const completedByNameRef = useRef(completedByName);
@@ -219,7 +221,7 @@ export default function Home() {
           setJobId(null);
           setPoll(null);
           setError(
-            "This analysis session expired (for example after a server restart). Run analysis again to continue.",
+            "This analysis session expired (serverless hosts finish each request separately). Run analysis again — on Vercel the latest deploy completes the batch in one request.",
           );
           return;
         }
@@ -254,15 +256,20 @@ export default function Home() {
     savedHistoryRef.current = true;
 
     void (async () => {
-      let csvContent: string | undefined;
-      try {
-        const res = await fetch(`/api/jobs/${jobId}/download`);
-        if (res.ok) {
-          const text = await res.text();
-          if (canStoreCsv(text)) csvContent = text;
+      let csvContent: string | undefined =
+        poll.csvContent ?? syncCsvContent ?? undefined;
+      if (!csvContent) {
+        try {
+          const res = await fetch(`/api/jobs/${jobId}/download`);
+          if (res.ok) {
+            const text = await res.text();
+            if (canStoreCsv(text)) csvContent = text;
+          }
+        } catch {
+          // optional cache
         }
-      } catch {
-        // optional cache
+      } else if (!canStoreCsv(csvContent)) {
+        csvContent = undefined;
       }
 
       const done = poll.files.filter(
@@ -285,7 +292,7 @@ export default function Home() {
         csvContent,
       });
     })();
-  }, [poll, jobId]);
+  }, [poll, jobId, syncCsvContent]);
 
   useEffect(() => {
     if (
@@ -316,6 +323,12 @@ export default function Home() {
     if (!jobId || !poll?.csvReady || !poll.downloadFilename) return;
     if (poll.status !== "completed" && poll.status !== "cancelled") return;
 
+    const fromSync = poll.csvContent ?? syncCsvContent;
+    if (fromSync) {
+      setSessionCsv({ content: fromSync, filename: poll.downloadFilename });
+      return;
+    }
+
     void (async () => {
       try {
         const res = await fetch(`/api/jobs/${jobId}/download`);
@@ -326,7 +339,14 @@ export default function Home() {
         // optional — next run can still proceed without append
       }
     })();
-  }, [jobId, poll?.status, poll?.csvReady, poll?.downloadFilename]);
+  }, [
+    jobId,
+    poll?.status,
+    poll?.csvReady,
+    poll?.downloadFilename,
+    poll?.csvContent,
+    syncCsvContent,
+  ]);
 
   const runAnalysis = async () => {
     const selected = localFiles.filter(
@@ -341,6 +361,7 @@ export default function Home() {
     setSubmitting(true);
     setPoll(null);
     setJobId(null);
+    setSyncCsvContent(null);
 
     const form = new FormData();
     for (const { file } of selected) {
@@ -355,7 +376,9 @@ export default function Home() {
 
     try {
       const res = await fetch("/api/jobs", { method: "POST", body: form });
-      const parsed = await readApiJson<{ jobId?: string; error?: string }>(res);
+      const parsed = await readApiJson<
+        Partial<JobPollResponse> & { jobId?: string; error?: string }
+      >(res);
       if ("error" in parsed) {
         setError(parsed.error);
         setSubmitting(false);
@@ -367,6 +390,34 @@ export default function Home() {
         setSubmitting(false);
         return;
       }
+
+      const syncDone =
+        data.status === "completed" ||
+        data.status === "failed" ||
+        data.status === "cancelled";
+
+      if (syncDone && data.status && data.files && data.total != null) {
+        const syncPoll: JobPollResponse = {
+          jobId: data.jobId,
+          status: data.status,
+          total: data.total,
+          completed: data.completed ?? data.total,
+          files: data.files,
+          errors: data.errors ?? [],
+          csvReady: data.csvReady ?? !!data.csvContent,
+          downloadFilename: data.downloadFilename ?? "Camera_Trap_Analysis.csv",
+          stats: data.stats,
+          supabase: data.supabase,
+          csvContent: data.csvContent,
+        };
+        setJobId(data.jobId);
+        setPoll(syncPoll);
+        if (data.csvContent) setSyncCsvContent(data.csvContent);
+        setSubmitting(false);
+        setStopping(false);
+        return;
+      }
+
       setJobId(data.jobId);
       startPolling(data.jobId);
     } catch (err) {
@@ -394,6 +445,18 @@ export default function Home() {
   };
 
   const downloadCsv = () => {
+    const csvText = syncCsvContent ?? poll?.csvContent ?? null;
+    const filename = poll?.downloadFilename;
+    if (csvText && filename) {
+      const blob = new Blob([csvText], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
     if (!jobId) return;
     window.location.href = `/api/jobs/${jobId}/download`;
   };
@@ -407,6 +470,7 @@ export default function Home() {
     setPreview(null);
     setCompletedByName({});
     setSessionCsv(null);
+    setSyncCsvContent(null);
     stopPolling();
     setSubmitting(false);
     setStopping(false);
@@ -421,6 +485,7 @@ export default function Home() {
     setStopping(false);
     setCompletedByName({});
     setSessionCsv(null);
+    setSyncCsvContent(null);
     stopPolling();
     savedHistoryRef.current = false;
   };

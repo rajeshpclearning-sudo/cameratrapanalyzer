@@ -41,14 +41,24 @@ export async function persistSightings(
     };
   }
 
-  const { error } = await supabase
-    .from("camera_trap_sightings")
-    .insert(rows.map((row) => rowToRecord(jobId, row)));
+  try {
+    const { error } = await supabase
+      .from("camera_trap_sightings")
+      .insert(rows.map((row) => rowToRecord(jobId, row)));
 
-  if (error) {
-    console.error("[supabase] persist sightings failed:", error.message);
-    return { configured: true, inserted: 0, error: error.message };
+    if (error) {
+      console.error("[supabase] persist sightings failed:", error.message);
+      return { configured: true, inserted: 0, error: error.message };
+    }
+
+    return { configured: true, inserted: rows.length };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    const friendly =
+      message.includes("fetch failed") || message.includes("ENOTFOUND")
+        ? `Cannot reach SUPABASE_URL (${process.env.SUPABASE_URL}). The project may be paused, deleted, or the URL/key is wrong.`
+        : message;
+    console.error("[supabase] persist sightings failed:", friendly);
+    return { configured: true, inserted: 0, error: friendly };
   }
-
-  return { configured: true, inserted: rows.length };
 }

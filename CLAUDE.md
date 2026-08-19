@@ -42,7 +42,7 @@ Browser (page.tsx)
 
 ### Key design decisions
 
-**Jobs are in-memory only.** `lib/jobs-store.ts` is a plain `Map<string, Job>`. There's no DB for job state — restarting the server clears all in-flight jobs. This is intentional for the MVP; note it in any Railway deploy troubleshooting.
+**Jobs are in-memory only.** `lib/jobs-store.ts` is a plain `Map<string, Job>`. There's no DB for job state — restarting the server clears all in-flight jobs. On **Vercel**, `POST /api/jobs` **awaits** `runBatch` and returns the finished job + CSV in one response (polling across serverless instances would 404). Local/Railway still use fire-and-forget `startBatch` + client poll.
 
 **Burst deduplication.** Files within `BURST_GAP_MS` (default 2000ms, sorted by `lastModified`) are grouped as a "burst." Only the first (leader) frame calls the LLM; followers copy the leader's species. If the leader is "Unidentified," each follower is analyzed independently. After the burst, `reconcileBurstSpecies` propagates a confident species to any "Unidentified" rows in the same burst.
 
@@ -72,7 +72,7 @@ Browser (page.tsx)
 | `OPENAI_BASE_URL` | No | Set to `https://openrouter.ai/api/v1` for OpenRouter |
 | `LLM_MODEL` | No | Default: `openai/gpt-4o-mini` |
 | `LLM_CONCURRENCY` | No | Parallel LLM calls, default 2, max 5 |
-| `OPENROUTER_SITE_URL` | No | Sent as `HTTP-Referer` header to OpenRouter |
+| `OPENROUTER_SITE_URL` | No | Sent as `HTTP-Referer` (use your Railway or Vercel public URL) |
 | `SKIP_EMPTY_FRAMES` | No | `false` to always call LLM (default `true`) |
 | `EMPTY_STDEV_THRESHOLD` | No | Grayscale stdev cutoff for empty detection (default `12`) |
 | `BURST_GAP_MS` | No | Burst grouping window in ms (default `2000`) |

@@ -339,10 +339,11 @@ async function finalizeCancelled(
   });
 }
 
-export function startBatch(input: BatchInput): void {
+/** Run the full analysis batch and update the in-memory job. Awaitable for Vercel sync mode. */
+export async function runBatch(input: BatchInput): Promise<void> {
   const { jobId, files, existingCsvBuffer, existingCsvName } = input;
 
-  void (async () => {
+  try {
     updateJob(jobId, {
       status: "running",
       stats: { emptySkipped: 0, burstCopied: 0, burstInferred: 0, llmCalls: 0 },
@@ -412,13 +413,18 @@ export function startBatch(input: BatchInput): void {
         error: supabaseResult.error,
       },
     });
-  })().catch((err) => {
+  } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     updateJob(jobId, {
       status: "failed",
       errors: [message],
     });
-  });
+  }
+}
+
+/** Fire-and-forget batch for local / Railway (long-lived process + client polling). */
+export function startBatch(input: BatchInput): void {
+  void runBatch(input);
 }
 
 export function initialFileStates(names: string[]): FileJobState[] {

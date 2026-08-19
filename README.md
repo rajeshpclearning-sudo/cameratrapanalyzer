@@ -179,8 +179,28 @@ Each analyzed photo becomes **one row**. Designers can mock this as a table or G
 | **Empty-frame skip** (no LLM on uniform frames) | Done |
 | **Burst deduplication** (shots within 2s share one LLM call) | Done |
 | Railway deploy config (`railway.toml`, `/api/health`) | Done |
+| Vercel deploy (sync analysis in one request) | Done |
 
 Optional env: `SKIP_EMPTY_FRAMES`, `EMPTY_STDEV_THRESHOLD`, `BURST_GAP_MS`, `DEDUPE_BURST` — see [.env.example](.env.example).
+
+### Host on Vercel
+
+Vercel runs **serverless** functions. This app finishes analysis **inside** `POST /api/jobs` on Vercel (no background job + poll), so you do not get “session expired” from a different instance.
+
+1. Import the GitHub repo in [vercel.com](https://vercel.com) (or connect the existing `cameratrapanalyzer` project).
+2. **Settings → Environment Variables** (Production + Preview):
+
+   | Variable | Value |
+   |----------|--------|
+   | `OPENAI_API_KEY` | OpenRouter `sk-or-v1-...` or OpenAI `sk-...` |
+   | `OPENAI_BASE_URL` | `https://openrouter.ai/api/v1` (OpenRouter only) |
+   | `LLM_MODEL` | `openai/gpt-4o-mini` (OpenRouter) |
+   | `OPENROUTER_SITE_URL` | `https://YOUR-APP.vercel.app` |
+   | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | Optional cloud save |
+
+3. **Redeploy** after adding variables (Deployments → … → Redeploy).
+4. Limits: Hobby ~**60s** / Pro up to **300s** per request (`maxDuration`); keep batches small. Request body size is also limited — prefer a few photos per run.
+5. For long multi-minute batches with live progress bars, prefer **Railway** (long-lived Node server + polling).
 
 ### Host on Railway
 
@@ -369,10 +389,10 @@ Do **not** use the **publishable** key (`sb_publishable_...`) — that one is fo
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `POST` | `/api/jobs` | `multipart/form-data`: `files[]`, optional `existingCsv` |
+| `POST` | `/api/jobs` | `multipart/form-data`: `files[]`, optional `existingCsv`. On **Vercel**, awaits the batch and returns full job status + `csvContent`. Local/Railway return `{ jobId }` and process in the background. |
 | `POST` | `/api/import-sightings` | `multipart/form-data`: `file`; optional `dryRun=true` for preview only |
-| `GET` | `/api/jobs/[id]` | Poll job status |
-| `GET` | `/api/jobs/[id]/download` | Download CSV when complete |
+| `GET` | `/api/jobs/[id]` | Poll job status (local/Railway) |
+| `GET` | `/api/jobs/[id]/download` | Download CSV when complete (local/Railway; Vercel client downloads from the sync POST body) |
 
 ### Optional env
 

@@ -110,4 +110,6 @@ export type JobPollResponse = {
   downloadFilename: string;
   stats?: JobStats;
   supabase?: JobSupabaseStatus;
+  /** Included on Vercel sync POST when the batch finishes in one request. */
+  csvContent?: string;
 };

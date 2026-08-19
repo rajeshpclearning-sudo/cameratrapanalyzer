@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
-import { createJob, deleteOldJobs } from "@/lib/jobs-store";
-import type { FileJobState } from "@/lib/types";
+import { createJob, deleteOldJobs, getJob } from "@/lib/jobs-store";
+import type { FileJobState, JobPollResponse } from "@/lib/types";
 import { defaultCsvFilename, filenameFromUpload } from "@/lib/csv";
 import { isAcceptedImage } from "@/lib/image-accept";
 
@@ -12,6 +12,32 @@ const MAX_FILES = 50;
 
 function initialFileStates(names: string[]): FileJobState[] {
   return names.map((name) => ({ name, status: "pending" }));
+}
+
+function jobToPollResponse(jobId: string): JobPollResponse | null {
+  const job = getJob(jobId);
+  if (!job) return null;
+
+  const terminal =
+    job.status === "completed" ||
+    job.status === "failed" ||
+    job.status === "cancelled";
+
+  return {
+    jobId: job.id,
+    status: job.status,
+    total: job.total,
+    completed: job.completed,
+    files: job.files,
+    errors: job.errors,
+    csvReady:
+      (job.status === "completed" || job.status === "cancelled") &&
+      !!job.csvContent,
+    downloadFilename: job.downloadFilename,
+    stats: job.stats,
+    supabase: job.supabase,
+    ...(terminal && job.csvContent ? { csvContent: job.csvContent } : {}),
+  };
 }
 
 export async function POST(request: Request) {
@@ -109,13 +135,28 @@ async function handlePost(request: Request) {
     createdAt: Date.now(),
   });
 
-  const { startBatch } = await import("@/lib/batch");
-  startBatch({
+  const { runBatch, startBatch } = await import("@/lib/batch");
+  const batchInput = {
     jobId,
     files,
     existingCsvBuffer,
     existingCsvName,
-  });
+  };
 
+  // Vercel serverless: finish the batch in this request so polling another
+  // instance does not 404 with "session expired".
+  if (process.env.VERCEL) {
+    await runBatch(batchInput);
+    const body = jobToPollResponse(jobId);
+    if (!body) {
+      return NextResponse.json(
+        { error: "Job finished but result was not available" },
+        { status: 500 },
+      );
+    }
+    return NextResponse.json(body);
+  }
+
+  startBatch(batchInput);
   return NextResponse.json({ jobId });
 }
