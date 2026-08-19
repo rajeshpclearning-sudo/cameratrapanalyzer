@@ -925,6 +925,19 @@ export default function Home() {
                             </p>
                           </div>
                         )}
+                        {poll.supabase.configured &&
+                          poll.supabase.saved === 0 &&
+                          !poll.supabase.error &&
+                          poll.files.some((f) => f.status === "done") && (
+                            <div className="flex items-start gap-sm rounded-lg border border-outline-variant bg-surface-container-high px-sm py-xs">
+                              <Icon name="database" className="mt-0.5 shrink-0 text-on-surface-variant" />
+                              <p className="text-label-md text-on-surface-variant">
+                                Analysis finished but 0 rows were saved to Supabase. Check
+                                Vercel env vars (URL + Secret key) match .env.local, then redeploy.
+                                Open /api/health on your site to test the connection.
+                              </p>
+                            </div>
+                          )}
                       </>
                     )}
 

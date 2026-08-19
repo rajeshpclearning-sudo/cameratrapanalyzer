@@ -198,9 +198,15 @@ Vercel runs **serverless** functions. This app finishes analysis **inside** `POS
    | `OPENROUTER_SITE_URL` | `https://YOUR-APP.vercel.app` |
    | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | Optional cloud save |
 
-3. **Redeploy** after adding variables (Deployments → … → Redeploy).
+3. **Redeploy** after adding or editing variables (Deployments → … → Redeploy).
 4. Limits: Hobby ~**60s** / Pro up to **300s** per request (`maxDuration`); keep batches small. Request body size is also limited — prefer a few photos per run.
 5. For long multi-minute batches with live progress bars, prefer **Railway** (long-lived Node server + polling).
+
+If analysis shows **Invalid URL**: `OPENAI_BASE_URL` is wrong (quotes, missing `https://`, or a pasted key). Edit it to exactly `https://openrouter.ai/api/v1` with no quotes, then Redeploy. Do not **Add** a name that already exists — **Edit** it.
+
+If analysis completes but shows **Invalid supabaseUrl**: `SUPABASE_URL` on Vercel is wrong. **Edit** it to exactly `https://YOUR_PROJECT_REF.supabase.co` (Supabase → Settings → General → **Project URL** — **not** the `supabase.com/dashboard/...` link). No quotes. Redeploy.
+
+If analysis succeeds but **no rows in Supabase**: open `https://YOUR-APP.vercel.app/api/health` — if `supabase.connected` is `false`, fix `SUPABASE_SERVICE_ROLE_KEY` (must be the project **Secret key** `sb_secret_...` from Settings → API Keys, **not** an account token `sbp_...` or publishable key). Copy the same values from working `.env.local`, redeploy, and run analysis again.
 
 ### Host on Railway
 

@@ -54,7 +54,7 @@ export async function POST(request: Request) {
 async function handlePost(request: Request) {
   deleteOldJobs();
 
-  if (!process.env.OPENAI_API_KEY) {
+  if (!process.env.OPENAI_API_KEY?.trim()) {
     return NextResponse.json(
       { error: "OPENAI_API_KEY is not configured on the server" },
       { status: 500 },

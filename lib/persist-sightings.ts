@@ -28,16 +28,42 @@ export async function persistSightings(
     return { configured: false, inserted: 0 };
   }
 
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim().replace(/^["']|["']$/g, "") ?? "";
+  if (serviceKey.startsWith("sbp_")) {
+    return {
+      configured: true,
+      inserted: 0,
+      error:
+        "SUPABASE_SERVICE_ROLE_KEY is an account token (sbp_...). Use the project Secret key (sb_secret_...) from Supabase → Settings → API Keys.",
+    };
+  }
+  if (serviceKey.startsWith("sb_publishable_")) {
+    return {
+      configured: true,
+      inserted: 0,
+      error:
+        "SUPABASE_SERVICE_ROLE_KEY is the publishable key. Use the Secret key (sb_secret_...) instead.",
+    };
+  }
+
   if (rows.length === 0) {
     return { configured: true, inserted: 0 };
   }
 
-  const supabase = getSupabaseAdmin();
+  let supabase;
+  try {
+    supabase = getSupabaseAdmin();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { configured: true, inserted: 0, error: message };
+  }
+
   if (!supabase) {
     return {
-      configured: false,
+      configured: true,
       inserted: 0,
-      error: "Invalid Supabase configuration (check SUPABASE_URL)",
+      error:
+        "Invalid SUPABASE_URL on server — use https://YOUR_PROJECT_REF.supabase.co (Settings → General), not the dashboard link. Then redeploy.",
     };
   }
 

@@ -52,23 +52,43 @@ const responseSchema = {
 
 let client: OpenAI | null = null;
 
+function envTrim(name: string): string {
+  const raw = process.env[name];
+  if (!raw) return "";
+  return raw.trim().replace(/^["']|["']$/g, "");
+}
+
+function resolveBaseUrl(apiKey: string): string | undefined {
+  const fromEnv = envTrim("OPENAI_BASE_URL");
+  if (fromEnv) {
+    try {
+      const parsed = new URL(fromEnv);
+      if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+        return fromEnv.replace(/\/$/, "");
+      }
+    } catch {
+      // fall through to key-based default
+    }
+  }
+  if (apiKey.startsWith("sk-or-")) return "https://openrouter.ai/api/v1";
+  return undefined;
+}
+
 function getClient(): OpenAI {
-  const key = process.env.OPENAI_API_KEY;
+  const key = envTrim("OPENAI_API_KEY");
   if (!key) {
     throw new Error("OPENAI_API_KEY is not set");
   }
   if (!client) {
-    const baseURL =
-      process.env.OPENAI_BASE_URL ??
-      (key.startsWith("sk-or-") ? "https://openrouter.ai/api/v1" : undefined);
-    const openRouter = baseURL?.includes("openrouter.ai");
+    const baseURL = resolveBaseUrl(key);
+    const openRouter = baseURL?.includes("openrouter.ai") ?? key.startsWith("sk-or-");
+    const referer = envTrim("OPENROUTER_SITE_URL") || "http://localhost:3000";
     client = new OpenAI({
       apiKey: key,
       baseURL,
       defaultHeaders: openRouter
         ? {
-            "HTTP-Referer":
-              process.env.OPENROUTER_SITE_URL ?? "http://localhost:3000",
+            "HTTP-Referer": referer,
             "X-Title": "WildEye Analyzer",
           }
         : undefined,
@@ -78,8 +98,9 @@ function getClient(): OpenAI {
 }
 
 function getModel(): string {
-  if (process.env.LLM_MODEL) return process.env.LLM_MODEL;
-  const key = process.env.OPENAI_API_KEY ?? "";
+  const model = envTrim("LLM_MODEL");
+  if (model) return model;
+  const key = envTrim("OPENAI_API_KEY");
   if (key.startsWith("sk-or-")) return "openai/gpt-4o-mini";
   return "gpt-4o-mini";
 }
