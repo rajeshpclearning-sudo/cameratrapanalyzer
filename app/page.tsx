@@ -895,6 +895,17 @@ export default function Home() {
                     </div>
                   )}
 
+                  {(poll?.status === "completed" || poll?.status === "cancelled") &&
+                    !poll.supabase && (
+                      <div className="flex items-start gap-sm rounded-lg border border-outline-variant bg-surface-container-high px-sm py-xs">
+                        <Icon name="database" className="mt-0.5 shrink-0 text-on-surface-variant" />
+                        <p className="text-label-md text-on-surface-variant">
+                          No cloud-save status came back from the server. Open /api/health
+                          to check the Supabase connection.
+                        </p>
+                      </div>
+                    )}
+
                   {poll?.supabase &&
                     (poll.status === "completed" || poll.status === "cancelled") && (
                       <>

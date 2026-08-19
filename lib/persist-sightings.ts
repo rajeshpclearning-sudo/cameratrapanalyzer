@@ -28,7 +28,10 @@ export async function persistSightings(
     return { configured: false, inserted: 0 };
   }
 
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim().replace(/^["']|["']$/g, "") ?? "";
+  const serviceKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/[\u200B-\u200D\uFEFF]/g, "")
+      .trim()
+      .replace(/^["']|["']$/g, "") ?? "";
   if (serviceKey.startsWith("sbp_")) {
     return {
       configured: true,
@@ -73,8 +76,11 @@ export async function persistSightings(
       .insert(rows.map((row) => rowToRecord(jobId, row)));
 
     if (error) {
-      console.error("[supabase] persist sightings failed:", error.message);
-      return { configured: true, inserted: 0, error: error.message };
+      const message = [error.message, error.code, error.details, error.hint]
+        .filter((part) => typeof part === "string" && part.trim())
+        .join(" — ") || "insert failed (empty error from Supabase)";
+      console.error("[supabase] persist sightings failed:", message);
+      return { configured: true, inserted: 0, error: message };
     }
 
     return { configured: true, inserted: rows.length };

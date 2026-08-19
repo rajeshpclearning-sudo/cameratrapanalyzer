@@ -206,7 +206,7 @@ If analysis shows **Invalid URL**: `OPENAI_BASE_URL` is wrong (quotes, missing `
 
 If analysis completes but shows **Invalid supabaseUrl**: `SUPABASE_URL` on Vercel is wrong. **Edit** it to exactly `https://YOUR_PROJECT_REF.supabase.co` (Supabase → Settings → General → **Project URL** — **not** the `supabase.com/dashboard/...` link). No quotes. Redeploy.
 
-If analysis succeeds but **no rows in Supabase**: open `https://YOUR-APP.vercel.app/api/health` — if `supabase.connected` is `false`, fix `SUPABASE_SERVICE_ROLE_KEY` (must be the project **Secret key** `sb_secret_...` from Settings → API Keys, **not** an account token `sbp_...` or publishable key). Copy the same values from working `.env.local`, redeploy, and run analysis again.
+If analysis succeeds but **no rows in Supabase**: open `https://YOUR-APP.vercel.app/api/health`. You want `"connected": true` and `"urlHost": "YOUR_PROJECT_REF.supabase.co"`. If `connected` is `false`, the `error` and `keyKind` fields say why. `keyKind` must be `sb_secret` (or `legacy_jwt`). Copy URL + Secret key from working `.env.local` into Vercel **Production**, then Redeploy. After a successful run, the sidebar should say **Saved N rows to Supabase**.
 
 ### Host on Railway
 

@@ -1,16 +1,28 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-let adminClient: SupabaseClient | null | undefined;
-
 function envTrim(name: string): string {
   const raw = process.env[name];
   if (!raw) return "";
-  return raw.trim().replace(/^["']|["']$/g, "");
+  return raw
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .trim()
+    .replace(/^["']|["']$/g, "");
+}
+
+function stripPastedAssignment(raw: string, name: string): string {
+  const prefix = `${name}=`;
+  if (raw.toUpperCase().startsWith(prefix)) {
+    return raw.slice(prefix.length).trim().replace(/^["']|["']$/g, "");
+  }
+  return raw;
 }
 
 /** Normalize common mis-pastes (dashboard link, bare ref, missing https, quotes). */
 export function normalizeSupabaseUrl(raw: string): string | null {
-  let url = raw.trim().replace(/^["']|["']$/g, "");
+  let url = stripPastedAssignment(
+    raw.replace(/[\u200B-\u200D\uFEFF]/g, "").trim().replace(/^["']|["']$/g, ""),
+    "SUPABASE_URL",
+  );
   if (!url) return null;
 
   const dashMatch = url.match(
@@ -34,10 +46,48 @@ export function normalizeSupabaseUrl(raw: string): string | null {
   return url;
 }
 
+function keyKind(key: string): string {
+  if (!key) return "missing";
+  if (key.startsWith("sb_secret_")) return "sb_secret";
+  if (key.startsWith("sb_publishable_")) return "sb_publishable";
+  if (key.startsWith("sbp_")) return "sbp_account_token";
+  if (key.startsWith("eyJ")) return "legacy_jwt";
+  return `other_len_${key.length}`;
+}
+
+function formatUnknownError(err: unknown): string {
+  if (err && typeof err === "object") {
+    const o = err as {
+      message?: string;
+      code?: string;
+      details?: string;
+      hint?: string;
+      status?: number;
+    };
+    const parts = [o.message, o.code, o.details, o.hint]
+      .map((p) => (typeof p === "string" ? p.trim() : ""))
+      .filter(Boolean);
+    if (o.status) parts.push(`status ${o.status}`);
+    if (parts.length > 0) return parts.join(" — ");
+    try {
+      const dumped = JSON.stringify(err);
+      if (dumped && dumped !== "{}") return dumped;
+    } catch {
+      // fall through
+    }
+  }
+  if (err instanceof Error && err.message) return err.message;
+  const asString = String(err ?? "");
+  return asString.trim() || "unknown error (empty message)";
+}
+
 /** True when env vars are set and URL looks like a project API host. */
 export function isSupabaseConfigured(): boolean {
   const url = normalizeSupabaseUrl(envTrim("SUPABASE_URL"));
-  const key = envTrim("SUPABASE_SERVICE_ROLE_KEY");
+  const key = stripPastedAssignment(
+    envTrim("SUPABASE_SERVICE_ROLE_KEY"),
+    "SUPABASE_SERVICE_ROLE_KEY",
+  );
   return Boolean(url && key);
 }
 
@@ -56,25 +106,21 @@ function isValidSupabaseProjectUrl(url: string): boolean {
 
 /** Server-only Supabase client. Returns null when env vars are not set or invalid. */
 export function getSupabaseAdmin(): SupabaseClient | null {
-  if (adminClient !== undefined) return adminClient;
-
   const url = normalizeSupabaseUrl(envTrim("SUPABASE_URL"));
-  const key = envTrim("SUPABASE_SERVICE_ROLE_KEY");
+  const key = stripPastedAssignment(
+    envTrim("SUPABASE_SERVICE_ROLE_KEY"),
+    "SUPABASE_SERVICE_ROLE_KEY",
+  );
 
-  if (!url || !key) {
-    adminClient = null;
-    return null;
-  }
+  if (!url || !key) return null;
 
   try {
-    adminClient = createClient(url, key, {
+    return createClient(url, key, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    return adminClient;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.warn("[supabase] createClient failed:", message);
-    adminClient = null;
     return null;
   }
 }
@@ -84,12 +130,24 @@ export type SupabaseHealth = {
   ok: boolean;
   rowCount?: number;
   error?: string;
+  urlHost?: string;
+  keyKind?: string;
 };
 
 /** Live check: can we read camera_trap_sightings with the configured key? */
 export async function checkSupabaseConnection(): Promise<SupabaseHealth> {
-  if (!isSupabaseConfigured()) {
-    return { configured: false, ok: false };
+  const url = normalizeSupabaseUrl(envTrim("SUPABASE_URL"));
+  const key = stripPastedAssignment(
+    envTrim("SUPABASE_SERVICE_ROLE_KEY"),
+    "SUPABASE_SERVICE_ROLE_KEY",
+  );
+  const meta = {
+    urlHost: url ? new URL(url).hostname : undefined,
+    keyKind: keyKind(key),
+  };
+
+  if (!url || !key) {
+    return { configured: false, ok: false, ...meta };
   }
 
   const client = getSupabaseAdmin();
@@ -98,22 +156,32 @@ export async function checkSupabaseConnection(): Promise<SupabaseHealth> {
       configured: true,
       ok: false,
       error:
-        "Invalid SUPABASE_URL — use https://YOUR_PROJECT_REF.supabase.co (Settings → General), not the dashboard link.",
+        "Could not create Supabase client. SUPABASE_URL must be https://YOUR_PROJECT_REF.supabase.co",
+      ...meta,
     };
   }
 
   try {
     const { count, error } = await client
       .from("camera_trap_sightings")
-      .select("*", { count: "exact", head: true });
+      .select("id", { count: "exact", head: true });
 
     if (error) {
-      return { configured: true, ok: false, error: error.message };
+      return {
+        configured: true,
+        ok: false,
+        error: formatUnknownError(error),
+        ...meta,
+      };
     }
 
-    return { configured: true, ok: true, rowCount: count ?? 0 };
+    return { configured: true, ok: true, rowCount: count ?? 0, ...meta };
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return { configured: true, ok: false, error: message };
+    return {
+      configured: true,
+      ok: false,
+      error: formatUnknownError(err),
+      ...meta,
+    };
   }
 }

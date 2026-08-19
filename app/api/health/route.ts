@@ -14,6 +14,8 @@ export async function GET() {
       connected: supabase.ok,
       rowCount: supabase.rowCount,
       error: supabase.error,
+      urlHost: supabase.urlHost,
+      keyKind: supabase.keyKind,
     },
   });
 }
