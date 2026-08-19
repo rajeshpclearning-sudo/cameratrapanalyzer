@@ -48,6 +48,14 @@ export async function persistSightings(
         "SUPABASE_SERVICE_ROLE_KEY is the publishable key. Use the Secret key (sb_secret_...) instead.",
     };
   }
+  if (serviceKey && !serviceKey.startsWith("sb_secret_") && !serviceKey.startsWith("eyJ")) {
+    return {
+      configured: true,
+      inserted: 0,
+      error:
+        "SUPABASE_SERVICE_ROLE_KEY on the server is not a Secret key. Paste the value that starts with sb_secret_ (Settings → API Keys → Secret keys). Then Redeploy.",
+    };
+  }
 
   if (rows.length === 0) {
     return { configured: true, inserted: 0 };
