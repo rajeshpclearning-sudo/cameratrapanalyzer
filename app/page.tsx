@@ -45,7 +45,11 @@ function Icon({ name, className = "" }: { name: string; className?: string }) {
 
 
 function isFileAnalyzed(state?: FileJobState): boolean {
-  return state?.status === "done" || state?.status === "skipped";
+  return (
+    state?.status === "done" ||
+    state?.status === "skipped" ||
+    state?.status === "already_done"
+  );
 }
 
 function isImageFile(f: File): boolean {
@@ -273,10 +277,15 @@ export default function Home() {
       }
 
       const done = poll.files.filter(
-        (f) => f.status === "done" || f.status === "skipped",
+        (f) =>
+          f.status === "done" ||
+          f.status === "skipped" ||
+          f.status === "already_done",
       ).length;
       const errors = poll.files.filter((f) => f.status === "error").length;
-      const skipped = poll.files.filter((f) => f.status === "skipped").length;
+      const skipped = poll.files.filter(
+        (f) => f.status === "skipped" || f.status === "already_done",
+      ).length;
 
       saveJobHistory({
         id: jobId,
@@ -310,6 +319,7 @@ export default function Home() {
         if (
           f.status === "done" ||
           f.status === "skipped" ||
+          f.status === "already_done" ||
           f.status === "error"
         ) {
           next[f.name] = f;
@@ -857,6 +867,8 @@ export default function Home() {
                     <p className="font-mono text-[10px] text-on-surface-variant">
                       LLM calls: {poll.stats.llmCalls}
                       {poll.stats.emptySkipped > 0 && ` · ${poll.stats.emptySkipped} empty skipped`}
+                      {(poll.stats.alreadyAnalyzed ?? 0) > 0 &&
+                        ` · ${poll.stats.alreadyAnalyzed} already analyzed`}
                       {poll.stats.burstCopied > 0 && ` · ${poll.stats.burstCopied} burst copies`}
                       {poll.stats.burstInferred > 0 && ` · ${poll.stats.burstInferred} burst ID`}
                     </p>
@@ -885,6 +897,18 @@ export default function Home() {
                       </p>
                     </div>
                   )}
+
+                  {poll?.status === "completed" &&
+                    (poll.stats?.alreadyAnalyzed ?? 0) > 0 && (
+                      <div className="flex items-start gap-sm rounded-lg border border-outline-variant bg-surface-container-high px-sm py-xs">
+                        <Icon name="history" className="mt-0.5 shrink-0 text-on-surface-variant" />
+                        <p className="text-label-md text-on-surface-variant">
+                          Skipped {poll.stats!.alreadyAnalyzed} photo
+                          {poll.stats!.alreadyAnalyzed === 1 ? "" : "s"} already in
+                          your log or Supabase (no new AI call, no duplicate row).
+                        </p>
+                      </div>
+                    )}
 
                   {poll?.status === "completed" && hasUnanalyzedFiles && (
                     <div className="flex items-start gap-sm rounded-lg border border-outline-variant bg-surface-container-high px-sm py-xs">

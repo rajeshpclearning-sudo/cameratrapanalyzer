@@ -48,11 +48,13 @@ Browser (page.tsx)
 
 **Empty-frame skip.** Before calling the LLM, `isLikelyEmptyFrame` runs `sharp` grayscale stats. If the standard deviation is below `EMPTY_STDEV_THRESHOLD` (default 12), the frame is skipped with a canned "No animal – uniform frame" row. Controlled by `SKIP_EMPTY_FRAMES` env var.
 
+**Already-analyzed skip.** Before grouping bursts, `resolveAlreadyAnalyzed` checks photo names against the uploaded/session CSV and Supabase (`camera_trap_sightings.photo_name`). Matches are marked `already_done` (prior row reused) — no LLM call and no second insert. `persistSightings(..., { skipExistingPhotoNames: true })` is a second safety net on write.
+
 **LLM provider abstraction.** `lib/llm/analyze.ts` uses the `openai` package pointed at either OpenAI or OpenRouter (detected by `sk-or-` key prefix or `OPENAI_BASE_URL`). Model is set via `LLM_MODEL` (default `gpt-4o-mini`). The LLM returns structured JSON via `response_format: json_schema`. Date/time is **never** sourced from the LLM — always from EXIF.
 
 **CSV column contract.** `lib/types.ts` defines `CSV_HEADER` and `CSV_COL` indices. `CsvRow` is a 7-tuple. Everything in the pipeline — LLM output normalization, burst copy, CSV build, Supabase insert, import parsing — maps through these indices. Changing column order requires updating all of these.
 
-**Supabase is optional.** When `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` are set, `persistSightings` inserts only *newly analyzed* rows after each job (not rows from an uploaded existing CSV). The import endpoint (`/api/import-sightings`) handles bulk uploads separately. RLS is disabled — this is a personal/server-side-only integration.
+**Supabase is optional.** When `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` are set, `persistSightings` inserts only *newly analyzed* rows after each job (not rows from an uploaded existing CSV, and not names already in the table). The import endpoint (`/api/import-sightings`) handles bulk uploads separately. RLS is disabled — this is a personal/server-side-only integration.
 
 **Import Log.** `/api/import-sightings` accepts `.xlsx`, `.xls`, or `.csv` files (parsed with `xlsx` package, server-side only — `xlsx` is excluded from the browser bundle via `next.config.ts` webpack alias). The endpoint supports a `dryRun=true` query param for preview-only.
 

@@ -316,7 +316,7 @@ npm run dev:clean
 
 1. **Select images** — folder picker or individual files (JPEG, PNG, WebP, HEIC; max 50 per batch). Click a row to preview.
 2. **Optional existing log** — upload a `Camera_Trap_Analysis*.csv` to **append** new rows (header must match spec below).
-3. **Run analysis** — progress per file; uses EXIF for date/time when available. After a batch finishes, **upload more photos** in the same session — new uploads are auto-selected, already-analyzed photos are skipped, and **Analyze N new photo(s)** only processes waiting rows; results append to the session CSV (and Supabase when configured). Use **Clear results & re-analyze all** only to wipe session memory and rerun everything.
+3. **Run analysis** — progress per file; uses EXIF for date/time when available. Before calling the AI, the server checks your **session CSV** and **Supabase** for the same **Photo Name**. Matches are marked **Already done** (no new AI call, no second database row). After a batch finishes, **upload more photos** in the same session — new uploads are auto-selected, already-analyzed photos are skipped, and **Analyze N new photo(s)** only processes waiting rows; results append to the session CSV (and Supabase when configured). Use **Clear results & re-analyze all** to wipe session memory; photos still in Supabase remain skipped unless you delete those rows in Table Editor first.
 4. **Download CSV** — new file `Camera_Trap_Analysis_YYYY-MM-DD.csv`, or same name as the uploaded log when appending.
 5. **Optional Supabase** — when configured, each **newly analyzed** row in a finished job is inserted into `camera_trap_sightings` (rows from an uploaded existing CSV or earlier session rows are not re-inserted).
 6. **Import Log** (sidebar) — upload a past analysis file in **Excel** (`.xlsx`, `.xls`) or **CSV** with the same column header as below. Preview rows, then **Import to Supabase**. If this browser imported a file with the **same filename** before, a warning appears and you must click **Import anyway** (tracking is per-browser in localStorage, not across devices). Re-importing still adds duplicate rows to Supabase.
@@ -593,7 +593,7 @@ Store `fileId + modifiedTime`; skip or offer re-analyze for unchanged files.
 |------|---------|
 | **Image** | Resize to 768–1024px long edge; JPEG ~80–85%; OpenAI `detail: "low"` when subject is large; burst dedup (Phase 2); ROI crop / empty-frame skip (Phase 2) |
 | **Prompt** | Short system prompt; JSON-only reply; no date/time in prompt |
-| **Workflow** | User multi-select only; cache by file ID; cheaper model for triage (Phase 2); batch APIs for overnight jobs |
+| **Workflow** | User multi-select only; cache by file ID; skip photo names already in session CSV / Supabase; cheaper model for triage (Phase 2); batch APIs for overnight jobs |
 | **MVP** | Resize + JPEG, short prompt, EXIF-only datetime, multi-select |
 
 Rough savings: downscaling 50–80% image tokens; skipping empty frames 30–70% fewer calls; burst dedup 20–50% fewer calls.

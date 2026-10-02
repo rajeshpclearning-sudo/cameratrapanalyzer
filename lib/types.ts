@@ -48,12 +48,14 @@ export type FileJobStatus =
   | "analyzing"
   | "done"
   | "error"
-  | "skipped";
+  | "skipped"
+  | "already_done";
 
 export type JobStats = {
   emptySkipped: number;
   burstCopied: number;
   burstInferred: number;
+  alreadyAnalyzed: number;
   llmCalls: number;
 };
 

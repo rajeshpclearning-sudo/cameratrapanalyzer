@@ -2,6 +2,7 @@ import "server-only";
 
 import { getSupabaseAdmin, isSupabaseConfigured } from "./supabase";
 import { CSV_COL, ROW_STATUS, type CsvRow, type PersistSightingsResult } from "./types";
+import { lookupExistingSightings } from "./existing-sightings";
 
 export type { PersistSightingsResult };
 
@@ -18,10 +19,16 @@ function rowToRecord(jobId: string, row: CsvRow) {
   };
 }
 
+export type PersistSightingsOptions = {
+  /** When true, drop rows whose photo_name already exists in Supabase. */
+  skipExistingPhotoNames?: boolean;
+};
+
 /** Saves newly analyzed rows to Supabase. Returns status for job poll / UI. */
 export async function persistSightings(
   jobId: string,
   rows: CsvRow[],
+  options: PersistSightingsOptions = {},
 ): Promise<PersistSightingsResult> {
   const configured = isSupabaseConfigured();
   if (!configured) {
@@ -57,7 +64,17 @@ export async function persistSightings(
     };
   }
 
-  if (rows.length === 0) {
+  let rowsToInsert = rows;
+  if (options.skipExistingPhotoNames && rows.length > 0) {
+    const existing = await lookupExistingSightings(
+      rows.map((r) => r[CSV_COL.photoName]),
+    );
+    rowsToInsert = rows.filter(
+      (r) => !existing.has(r[CSV_COL.photoName]?.trim()),
+    );
+  }
+
+  if (rowsToInsert.length === 0) {
     return { configured: true, inserted: 0 };
   }
 
@@ -81,7 +98,7 @@ export async function persistSightings(
   try {
     const { error } = await supabase
       .from("camera_trap_sightings")
-      .insert(rows.map((row) => rowToRecord(jobId, row)));
+      .insert(rowsToInsert.map((row) => rowToRecord(jobId, row)));
 
     if (error) {
       const message = [error.message, error.code, error.details, error.hint]
@@ -91,7 +108,7 @@ export async function persistSightings(
       return { configured: true, inserted: 0, error: message };
     }
 
-    return { configured: true, inserted: rows.length };
+    return { configured: true, inserted: rowsToInsert.length };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     const friendly =

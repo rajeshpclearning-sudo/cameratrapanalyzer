@@ -23,6 +23,14 @@ export function getFileStatusDisplay(
         icon: "check_circle",
         iconClass: "text-primary text-sm",
       };
+    case "already_done":
+      return {
+        label: "Already done",
+        rowClass: "bg-surface-container-high/50",
+        badgeClass: "text-on-surface-variant bg-surface-container-highest",
+        icon: "history",
+        iconClass: "text-on-surface-variant text-sm",
+      };
     case "skipped":
       return {
         label: jobStatus === "cancelled" ? "Stopped" : "Skipped",

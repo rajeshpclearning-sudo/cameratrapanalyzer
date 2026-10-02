@@ -15,6 +15,7 @@ import { extractDateTime } from "./exif";
 import { decodeToJpeg, isAcceptedImage } from "./image";
 import { getJob, isJobCancelRequested, updateJob } from "./jobs-store";
 import { persistSightings } from "./persist-sightings";
+import { resolveAlreadyAnalyzed } from "./existing-sightings";
 import {
   burstGapMs,
   emptyFrameRow,
@@ -22,7 +23,7 @@ import {
   isLikelyEmptyFrame,
 } from "./preprocess";
 import type { CsvRow, FileJobState, LlmAnalysis } from "./types";
-import { ROW_STATUS } from "./types";
+import { CSV_COL, ROW_STATUS } from "./types";
 
 const SKIP_EMPTY = process.env.SKIP_EMPTY_FRAMES !== "false";
 const DEDUPE_BURST = process.env.DEDUPE_BURST !== "false";
@@ -118,7 +119,12 @@ function applyBurstReconciliation(
 
 function incrementStats(
   jobId: string,
-  field: "emptySkipped" | "burstCopied" | "burstInferred" | "llmCalls",
+  field:
+    | "emptySkipped"
+    | "burstCopied"
+    | "burstInferred"
+    | "alreadyAnalyzed"
+    | "llmCalls",
   n = 1,
 ): void {
   const job = getJob(jobId);
@@ -127,6 +133,7 @@ function incrementStats(
     emptySkipped: 0,
     burstCopied: 0,
     burstInferred: 0,
+    alreadyAnalyzed: 0,
     llmCalls: 0,
   };
   stats[field] += n;
@@ -320,11 +327,16 @@ async function finalizeCancelled(
       : f,
   );
 
+  // Persist newly analyzed + empty-frame skips; never re-insert already_done.
   const newRows = files
-    .filter((f) => f.row)
+    .filter(
+      (f) => f.row && (f.status === "done" || f.status === "skipped"),
+    )
     .map((f) => f.row!);
 
-  const supabaseResult = await persistSightings(jobId, newRows);
+  const supabaseResult = await persistSightings(jobId, newRows, {
+    skipExistingPhotoNames: true,
+  });
 
   updateJob(jobId, {
     status: "cancelled",
@@ -346,7 +358,13 @@ export async function runBatch(input: BatchInput): Promise<void> {
   try {
     updateJob(jobId, {
       status: "running",
-      stats: { emptySkipped: 0, burstCopied: 0, burstInferred: 0, llmCalls: 0 },
+      stats: {
+        emptySkipped: 0,
+        burstCopied: 0,
+        burstInferred: 0,
+        alreadyAnalyzed: 0,
+        llmCalls: 0,
+      },
     });
 
     let existingRows: CsvRow[] = [];
@@ -369,7 +387,32 @@ export async function runBatch(input: BatchInput): Promise<void> {
       return;
     }
 
-    const meta = files.map((f) => ({
+    const alreadyKnown = await resolveAlreadyAnalyzed(
+      files.map((f) => f.name),
+      existingRows,
+    );
+    const fromCsv = new Set(
+      existingRows.map((r) => r[CSV_COL.photoName]?.trim()).filter(Boolean),
+    );
+
+    const analyzeIndices: number[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const name = files[i]!.name;
+      const prior = alreadyKnown.get(name.trim()) ?? alreadyKnown.get(name);
+      if (prior) {
+        markFile(jobId, i, {
+          name,
+          status: "already_done",
+          row: prior,
+        });
+        incrementStats(jobId, "alreadyAnalyzed");
+        continue;
+      }
+      analyzeIndices.push(i);
+    }
+
+    const analyzeFiles = analyzeIndices.map((i) => files[i]!);
+    const meta = analyzeFiles.map((f) => ({
       name: f.name,
       lastModified: f.lastModified,
     }));
@@ -380,7 +423,9 @@ export async function runBatch(input: BatchInput): Promise<void> {
       if (isJobCancelRequested(jobId)) {
         return Promise.resolve(group.map(() => null));
       }
-      return processGroup(jobId, group, files);
+      // Remap group indices (relative to analyzeFiles) back to original file indices
+      const originalGroup = group.map((gi) => analyzeIndices[gi]!);
+      return processGroup(jobId, originalGroup, files);
     });
 
     if (isJobCancelRequested(jobId)) {
@@ -398,10 +443,17 @@ export async function runBatch(input: BatchInput): Promise<void> {
       }
     }
 
+    // CSV: keep prior log rows, then only newly analyzed rows (not already_done).
     const allRows = [...existingRows, ...newRows];
     const csvContent = buildCsv(allRows);
 
-    const supabaseResult = await persistSightings(jobId, newRows);
+    // Never re-insert photo names already in the session CSV or Supabase.
+    const toPersist = newRows.filter(
+      (row) => !fromCsv.has(row[CSV_COL.photoName]?.trim()),
+    );
+    const supabaseResult = await persistSightings(jobId, toPersist, {
+      skipExistingPhotoNames: true,
+    });
 
     updateJob(jobId, {
       status: "completed",
