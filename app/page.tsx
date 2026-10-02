@@ -68,6 +68,7 @@ function isImageFile(f: File): boolean {
 
 export default function Home() {
   const [view, setView] = useState<View>("analysis");
+  const [navOpen, setNavOpen] = useState(false);
   const [localFiles, setLocalFiles] = useState<LocalFile[]>([]);
   const [thumbUrls, setThumbUrls] = useState<Record<string, string>>({});
   const [existingCsv, setExistingCsv] = useState<File | null>(null);
@@ -558,16 +559,61 @@ export default function Home() {
 
   const navClass = (active: boolean) =>
     active
-      ? "flex items-center space-x-sm rounded-xl bg-secondary-container px-sm py-3 font-bold text-on-secondary-container transition-transform active:translate-x-1"
-      : "flex w-full items-center space-x-sm rounded-xl px-sm py-3 text-on-surface-variant transition-all hover:bg-surface-container-highest";
+      ? "flex min-h-11 items-center space-x-sm rounded-xl bg-secondary-container px-sm py-3 font-bold text-on-secondary-container transition-transform active:translate-x-1"
+      : "flex min-h-11 w-full items-center space-x-sm rounded-xl px-sm py-3 text-on-surface-variant transition-all hover:bg-surface-container-highest";
+
+  const goToView = (next: View) => {
+    setView(next);
+    setNavOpen(false);
+  };
+
+  const headerPrefix =
+    view === "analysis"
+      ? "Session"
+      : view === "library"
+        ? "Library"
+        : "Import";
+  const headerPrefixDesktop =
+    view === "analysis"
+      ? "Camera Trap Session /"
+      : view === "library"
+        ? "Log Library /"
+        : "Import Log /";
+  const headerTitle =
+    view === "analysis"
+      ? sessionLabel
+      : view === "library"
+        ? "Saved runs"
+        : "Past analysis";
 
   return (
     <>
-      <aside className="fixed left-0 top-0 z-50 flex h-screen w-64 flex-col border-r border-outline-variant bg-surface-container-low p-sm">
-        <div className="px-sm py-md">
+      {navOpen && (
+        <button
+          type="button"
+          aria-label="Close menu"
+          className="fixed inset-0 z-[55] bg-black/50 md:hidden"
+          onClick={() => setNavOpen(false)}
+        />
+      )}
+
+      <aside
+        className={`fixed left-0 top-0 z-[60] flex h-screen w-64 flex-col border-r border-outline-variant bg-surface-container-low p-sm transition-transform duration-200 md:translate-x-0 ${
+          navOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex items-center justify-between px-sm py-md">
           <h1 className="text-headline-sm font-bold text-primary">
             WildEye Analyzer
           </h1>
+          <button
+            type="button"
+            className="flex h-11 w-11 items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container-highest md:hidden"
+            aria-label="Close menu"
+            onClick={() => setNavOpen(false)}
+          >
+            <Icon name="close" />
+          </button>
         </div>
 
         <div className="mb-md flex items-center space-x-sm px-sm py-xs">
@@ -585,15 +631,15 @@ export default function Home() {
         </div>
 
         <nav className="flex-grow space-y-1">
-          <button type="button" onClick={() => setView("analysis")} className={navClass(view === "analysis")}>
+          <button type="button" onClick={() => goToView("analysis")} className={navClass(view === "analysis")}>
             <Icon name="analytics" />
             <span className="text-label-md">Analysis</span>
           </button>
-          <button type="button" onClick={() => setView("library")} className={navClass(view === "library")}>
+          <button type="button" onClick={() => goToView("library")} className={navClass(view === "library")}>
             <Icon name="database" />
             <span className="text-label-md">Log Library</span>
           </button>
-          <button type="button" onClick={() => setView("import")} className={navClass(view === "import")}>
+          <button type="button" onClick={() => goToView("import")} className={navClass(view === "import")}>
             <Icon name="cloud_upload" />
             <span className="text-label-md">Import Log</span>
           </button>
@@ -609,10 +655,10 @@ export default function Home() {
 
         <button
           type="button"
-          className="mb-md w-full rounded-xl bg-primary-container py-3 font-mono text-label-md font-bold text-on-primary-container transition-all hover:brightness-110"
+          className="mb-md min-h-11 w-full rounded-xl bg-primary-container py-3 font-mono text-label-md font-bold text-on-primary-container transition-all hover:brightness-110"
           onClick={() => {
             resetSession();
-            setView("analysis");
+            goToView("analysis");
           }}
         >
           New Analysis
@@ -626,24 +672,31 @@ export default function Home() {
         </div>
       </aside>
 
-      <main className="ml-64 flex min-h-screen flex-grow flex-col">
+      <main
+        className={`ml-0 flex min-h-screen flex-grow flex-col md:ml-64 ${
+          view === "analysis" ? "pb-28 md:pb-0" : ""
+        }`}
+      >
         <header className="sticky top-0 z-40 border-b border-outline-variant bg-surface-container">
-          <div className="flex h-16 w-full items-center justify-between px-lg">
-            <div className="flex min-w-0 items-center gap-md">
-              <div className="flex min-w-0 items-center space-x-md">
-                <span className="text-headline-sm text-on-surface-variant">
-                  {view === "analysis"
-                    ? "Camera Trap Session /"
-                    : view === "library"
-                      ? "Log Library /"
-                      : "Import Log /"}
+          <div className="flex h-14 w-full items-center justify-between gap-sm px-md md:h-16 md:px-lg">
+            <div className="flex min-w-0 items-center gap-sm md:gap-md">
+              <button
+                type="button"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-on-surface hover:bg-surface-container-highest md:hidden"
+                aria-label="Open menu"
+                onClick={() => setNavOpen(true)}
+              >
+                <Icon name="menu" />
+              </button>
+              <div className="flex min-w-0 items-center gap-xs md:space-x-md">
+                <span className="hidden text-headline-sm text-on-surface-variant md:inline">
+                  {headerPrefixDesktop}
                 </span>
-                <span className="truncate text-headline-sm font-bold text-primary">
-                  {view === "analysis"
-                    ? sessionLabel
-                    : view === "library"
-                      ? "Saved runs"
-                      : "Past analysis"}
+                <span className="shrink-0 text-label-md text-on-surface-variant md:hidden">
+                  {headerPrefix}
+                </span>
+                <span className="truncate text-label-md font-bold text-primary md:text-headline-sm">
+                  {headerTitle}
                 </span>
               </div>
               {view === "analysis" && sessionStatus && (
@@ -663,7 +716,7 @@ export default function Home() {
                 type="button"
                 disabled={stopping}
                 onClick={() => void stopAnalysis()}
-                className="flex shrink-0 items-center space-x-xs rounded-xl border border-error/40 bg-error-container/10 px-md py-2 font-mono text-label-md font-bold uppercase text-error transition-all hover:bg-error/10 disabled:opacity-50"
+                className="hidden shrink-0 items-center space-x-xs rounded-xl border border-error/40 bg-error-container/10 px-md py-2 font-mono text-label-md font-bold uppercase text-error transition-all hover:bg-error/10 disabled:opacity-50 md:flex"
               >
                 <Icon name="stop_circle" className="text-lg" />
                 <span>{stopping ? "Stopping…" : "Stop"}</span>
@@ -671,7 +724,7 @@ export default function Home() {
             )}
           </div>
           {view === "analysis" && showProgress && (
-            <div className="border-t border-outline-variant/50 px-lg pb-sm pt-xs">
+            <div className="border-t border-outline-variant/50 px-md pb-sm pt-xs md:px-lg">
               <div className="flex items-center justify-between gap-sm">
                 <p className="truncate font-mono text-[10px] uppercase text-on-surface-variant">
                   {sessionStatus?.detail ?? "Processing photos"}
@@ -703,18 +756,22 @@ export default function Home() {
         </header>
 
         {view === "library" ? (
-          <LogLibraryView onOpenAnalysis={() => setView("analysis")} />
+          <LogLibraryView
+            onOpenAnalysis={() => {
+              goToView("analysis");
+            }}
+          />
         ) : view === "import" ? (
           <ImportLogView />
         ) : (
           <>
             {error && (
-              <div className="mx-lg mt-md rounded-xl border border-error/40 bg-error-container/20 px-md py-sm text-label-md text-error">
+              <div className="mx-md mt-md rounded-xl border border-error/40 bg-error-container/20 px-md py-sm text-label-md text-error md:mx-lg">
                 {error}
               </div>
             )}
 
-            <div className="mx-auto grid w-full max-w-content grid-cols-12 gap-lg p-lg">
+            <div className="mx-auto grid w-full max-w-content grid-cols-12 gap-md p-md md:gap-lg md:p-lg">
               <section className="col-span-12 flex flex-col space-y-md xl:col-span-8">
                 <div className="flex flex-wrap items-center justify-between gap-sm">
                   <div className="flex items-center space-x-sm">
@@ -726,13 +783,13 @@ export default function Home() {
                     </h2>
                   </div>
                   <div className="flex flex-wrap gap-xs">
-                    <button type="button" onClick={() => selectAll(true)} className="rounded-lg border border-outline-variant px-sm py-1 font-mono text-[10px] uppercase hover:bg-surface-container-high">
+                    <button type="button" onClick={() => selectAll(true)} className="min-h-11 rounded-lg border border-outline-variant px-sm py-2 font-mono text-[10px] uppercase hover:bg-surface-container-high">
                       Select all
                     </button>
-                    <button type="button" onClick={() => selectAll(false)} className="rounded-lg border border-outline-variant px-sm py-1 font-mono text-[10px] uppercase hover:bg-surface-container-high">
+                    <button type="button" onClick={() => selectAll(false)} className="min-h-11 rounded-lg border border-outline-variant px-sm py-2 font-mono text-[10px] uppercase hover:bg-surface-container-high">
                       Deselect all
                     </button>
-                    <button type="button" onClick={removeSelected} className="rounded-lg border border-error/30 px-sm py-1 font-mono text-[10px] uppercase text-error hover:bg-error/10">
+                    <button type="button" onClick={removeSelected} className="min-h-11 rounded-lg border border-error/30 px-sm py-2 font-mono text-[10px] uppercase text-error hover:bg-error/10">
                       Remove selected
                     </button>
                   </div>
@@ -742,7 +799,23 @@ export default function Home() {
                 <input ref={filesInputRef} type="file" accept={ACCEPT} multiple hidden data-ui-file-input className="hidden" onChange={onFilesChange} />
                 <input ref={csvInputRef} type="file" accept=".csv,text/csv" hidden data-ui-file-input className="hidden" onChange={(e) => setExistingCsv(e.target.files?.[0] ?? null)} />
 
-                <div className="grid grid-cols-1 gap-md md:grid-cols-2">
+                {/* Phone-first: single Choose photos CTA (Drive / Files via system picker) */}
+                <div className="md:hidden">
+                  <button
+                    type="button"
+                    onClick={() => filesInputRef.current?.click()}
+                    className="group flex w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-primary/50 bg-surface-container-low px-md py-8 transition-colors active:border-primary"
+                  >
+                    <Icon name="add_photo_alternate" className="mb-sm text-5xl text-primary" />
+                    <span className="text-headline-sm font-semibold">Choose photos</span>
+                    <span className="mt-xs max-w-xs text-center text-label-md text-on-surface-variant">
+                      Open Google Drive or Files in the picker, then select images (max {MAX_FILES})
+                    </span>
+                  </button>
+                </div>
+
+                {/* Desktop: folder + individual files */}
+                <div className="hidden grid-cols-1 gap-md md:grid md:grid-cols-2">
                   <button type="button" onClick={() => folderInputRef.current?.click()} className="group flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-outline-variant bg-surface-container-low p-lg transition-colors hover:border-primary">
                     <Icon name="folder_zip" className="mb-sm text-4xl text-on-surface-variant group-hover:text-primary" />
                     <span className="text-headline-sm font-semibold">Upload Folder</span>
@@ -755,7 +828,7 @@ export default function Home() {
                   </button>
                 </div>
 
-                <div className="max-h-[520px] overflow-y-auto">
+                <div className="max-h-[min(60vh,520px)] overflow-y-auto md:max-h-[520px]">
                   <FileListTable
                     localFiles={localFiles}
                     poll={poll}
@@ -772,7 +845,7 @@ export default function Home() {
                     {analyzedCount > 0 || waitingCount > 0
                       ? `${analyzedCount} analyzed · ${waitingCount} waiting · `
                       : ""}
-                    {selectedCount} of {localFiles.length} selected · results appear in the table as each photo is analyzed · click a row to preview
+                    {selectedCount} of {localFiles.length} selected · tap a photo to preview
                   </p>
                 )}
               </section>
@@ -781,7 +854,10 @@ export default function Home() {
                 <div className="rounded-xl border border-outline-variant bg-surface-container p-md">
                   <div className="mb-md flex items-center space-x-sm">
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-outline-variant text-sm font-bold text-background">2</span>
-                    <h3 className="text-headline-sm font-semibold">Existing Log (Optional)</h3>
+                    <h3 className="text-headline-sm font-semibold">
+                      <span className="md:hidden">Existing log</span>
+                      <span className="hidden md:inline">Existing Log (Optional)</span>
+                    </h3>
                   </div>
                   {existingCsv ? (
                     <div className="flex items-center justify-between rounded-lg border border-primary/30 bg-surface-dim p-sm">
@@ -789,14 +865,15 @@ export default function Home() {
                         <Icon name="description" className="shrink-0 text-primary" />
                         <span className="truncate text-label-md">{existingCsv.name}</span>
                       </div>
-                      <button type="button" onClick={() => { setExistingCsv(null); if (csvInputRef.current) csvInputRef.current.value = ""; }} className="text-on-surface-variant hover:text-error">
+                      <button type="button" onClick={() => { setExistingCsv(null); if (csvInputRef.current) csvInputRef.current.value = ""; }} className="flex h-11 w-11 items-center justify-center text-on-surface-variant hover:text-error" aria-label="Remove CSV">
                         <Icon name="close" />
                       </button>
                     </div>
                   ) : (
-                    <button type="button" onClick={() => csvInputRef.current?.click()} className="flex w-full items-center justify-center space-x-sm rounded-lg border border-dashed border-outline-variant py-4 text-label-md text-on-surface-variant hover:border-primary hover:text-primary">
+                    <button type="button" onClick={() => csvInputRef.current?.click()} className="flex min-h-11 w-full items-center justify-center space-x-sm rounded-lg border border-dashed border-outline-variant py-3 text-label-md text-on-surface-variant hover:border-primary hover:text-primary md:py-4">
                       <Icon name="upload_file" />
-                      <span>Upload Camera_Trap_Analysis*.csv</span>
+                      <span className="md:hidden">Optional CSV to append</span>
+                      <span className="hidden md:inline">Upload Camera_Trap_Analysis*.csv</span>
                     </button>
                   )}
                 </div>
@@ -826,13 +903,13 @@ export default function Home() {
                         type="button"
                         disabled={!canRunAnalysis}
                         onClick={() => void runAnalysis()}
-                        className="flex w-full items-center justify-center space-x-sm rounded-xl bg-primary py-4 text-headline-sm font-bold text-background shadow-lg shadow-primary/10 transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="hidden w-full items-center justify-center space-x-sm rounded-xl bg-primary py-4 text-headline-sm font-bold text-background shadow-lg shadow-primary/10 transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 md:flex"
                       >
                         <Icon name="bolt" />
                         <span>{analyzeButtonLabel}</span>
                       </button>
                       {hasUnanalyzedFiles && !canRunAnalysis && (
-                        <p className="text-label-md text-on-surface-variant">
+                        <p className="hidden text-label-md text-on-surface-variant md:block">
                           Check the box next to each new photo in the table above, then click analyze.
                         </p>
                       )}
@@ -980,7 +1057,7 @@ export default function Home() {
                     type="button"
                     disabled={!csvReady}
                     onClick={downloadCsv}
-                    className={`flex w-full items-center justify-center space-x-sm rounded-xl border border-primary py-3 font-mono text-label-md font-bold text-primary hover:bg-primary/5 ${csvReady ? "" : "cursor-not-allowed opacity-50"}`}
+                    className={`hidden w-full items-center justify-center space-x-sm rounded-xl border border-primary py-3 font-mono text-label-md font-bold text-primary hover:bg-primary/5 md:flex ${csvReady ? "" : "cursor-not-allowed opacity-50"}`}
                   >
                     <Icon name="download" />
                     <span>
@@ -1040,6 +1117,43 @@ export default function Home() {
           </>
         )}
       </main>
+
+      {view === "analysis" && (
+        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-outline-variant bg-surface-container/95 p-sm backdrop-blur-md md:hidden">
+          <div className="mx-auto flex max-w-content gap-sm">
+            {(analysisRunning || stopping) ? (
+              <button
+                type="button"
+                disabled={stopping}
+                onClick={() => void stopAnalysis()}
+                className="flex min-h-12 flex-1 items-center justify-center gap-xs rounded-xl border border-error/40 bg-error-container/10 font-mono text-label-md font-bold uppercase text-error disabled:opacity-50"
+              >
+                <Icon name="stop_circle" />
+                <span>{stopping ? "Stopping…" : "Stop"}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={!canRunAnalysis}
+                onClick={() => void runAnalysis()}
+                className="flex min-h-12 flex-1 items-center justify-center gap-xs rounded-xl bg-primary font-bold text-background disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Icon name="bolt" />
+                <span className="truncate px-1">{analyzeButtonLabel}</span>
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={!csvReady}
+              onClick={downloadCsv}
+              className={`flex min-h-12 min-w-12 items-center justify-center rounded-xl border border-primary text-primary ${csvReady ? "" : "cursor-not-allowed opacity-40"}`}
+              aria-label="Download CSV"
+            >
+              <Icon name="download" />
+            </button>
+          </div>
+        </div>
+      )}
 
       <PreviewModal
         open={!!preview}

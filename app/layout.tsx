@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -17,6 +17,12 @@ const jetbrains = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "WildEye Analyzer",
   description: "Analyze camera-trap photos and export wildlife logs",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#101511",
 };
 
 export default function RootLayout({

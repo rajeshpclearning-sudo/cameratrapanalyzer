@@ -208,6 +208,18 @@ If analysis completes but shows **Invalid supabaseUrl**: `SUPABASE_URL` on Verce
 
 If analysis succeeds but **no rows in Supabase**: open `https://YOUR-APP.vercel.app/api/health`. You want `"connected": true` and `"urlHost": "YOUR_PROJECT_REF.supabase.co"`. If `connected` is `false`, the `error` and `keyKind` fields say why. `keyKind` must be `sb_secret` (or `legacy_jwt`). Copy URL + Secret key from working `.env.local` into Vercel **Production**, then Redeploy. After a successful run, the sidebar should say **Saved N rows to Supabase**.
 
+### Mobile (Vercel)
+
+Use the same Vercel URL on your phone browser (Chrome or Safari).
+
+1. Open the site → tap the **menu** (☰) for Analysis, Log Library, or Import Log.
+2. On **Analysis**, tap **Choose photos**.
+3. In the phone’s file picker, open **Google Drive** (or Files) and select trap images (max 50 per run).
+4. Tap **Run Analysis** on the sticky bar at the bottom.
+5. When finished, tap the download icon for the CSV (and check Supabase if configured).
+
+Drive access is through the **phone’s picker**, not Google sign-in inside the app. Prefer small batches on Vercel Hobby (~60s limit). Desktop layout (folder upload + wide table) is unchanged on larger screens.
+
 ### Host on Railway
 
 1. Push this repo to [GitHub](https://github.com/rajeshpclearning-sudo/cameratrapanalyzer).
@@ -314,7 +326,7 @@ npm run dev:clean
 
 ### Usage
 
-1. **Select images** — folder picker or individual files (JPEG, PNG, WebP, HEIC; max 50 per batch). Click a row to preview.
+1. **Select images** — on desktop: folder picker or individual files; on phone: **Choose photos** and pick from Google Drive / Files (JPEG, PNG, WebP, HEIC; max 50 per batch). Tap a row/card to preview.
 2. **Optional existing log** — upload a `Camera_Trap_Analysis*.csv` to **append** new rows (header must match spec below).
 3. **Run analysis** — progress per file; uses EXIF for date/time when available. Before calling the AI, the server checks your **session CSV** and **Supabase** for the same **Photo Name**. Matches are marked **Already done** (no new AI call, no second database row). After a batch finishes, **upload more photos** in the same session — new uploads are auto-selected, already-analyzed photos are skipped, and **Analyze N new photo(s)** only processes waiting rows; results append to the session CSV (and Supabase when configured). Use **Clear results & re-analyze all** to wipe session memory; photos still in Supabase remain skipped unless you delete those rows in Table Editor first.
 4. **Download CSV** — new file `Camera_Trap_Analysis_YYYY-MM-DD.csv`, or same name as the uploaded log when appending.
