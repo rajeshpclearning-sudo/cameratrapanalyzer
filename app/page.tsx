@@ -370,7 +370,8 @@ export default function Home() {
 
     setError(null);
     setSubmitting(true);
-    setPoll(null);
+    setStopping(false);
+    // Keep prior poll visible until the new result arrives (Vercel sync can take a while).
     setJobId(null);
     setSyncCsvContent(null);
 
@@ -429,6 +430,7 @@ export default function Home() {
         return;
       }
 
+      setPoll(null);
       setJobId(data.jobId);
       startPolling(data.jobId);
     } catch (err) {
@@ -535,20 +537,29 @@ export default function Home() {
       analysisRunning ||
       sessionFinished ||
       (poll.status === "completed" && hasUnanalyzedFiles));
-  const analyzeButtonLabel = canRunAnalysis
-    ? analyzedCount > 0
-      ? `Analyze ${unanalyzedSelected.length} new photo${unanalyzedSelected.length === 1 ? "" : "s"}`
-      : "Run Analysis"
-    : hasUnanalyzedFiles
-      ? "Select new photo(s) to analyze"
-      : localFiles.length > 0
-        ? "All photos analyzed"
-        : "Run Analysis";
+  const analyzeButtonLabel = submitting
+    ? "Analyzing…"
+    : canRunAnalysis
+      ? analyzedCount > 0
+        ? `Analyze ${unanalyzedSelected.length} new photo${unanalyzedSelected.length === 1 ? "" : "s"}`
+        : "Run Analysis"
+      : hasUnanalyzedFiles
+        ? "Select new photo(s) to analyze"
+        : localFiles.length > 0
+          ? "All photos analyzed"
+          : "Run Analysis";
   const sessionStatusRaw = getSessionStatusDisplay(poll, submitting, stopping);
   const sessionStatus =
-    sessionStatusRaw?.label === "Complete" && hasUnanalyzedFiles
-      ? null
-      : sessionStatusRaw;
+    submitting && (!poll || poll.status === "completed" || poll.status === "cancelled" || poll.status === "failed")
+      ? {
+          label: "Running",
+          detail: `Starting analysis of ${unanalyzedSelected.length || "new"} photo(s)…`,
+          chipClass: "border-[#0091ff]/40 bg-[#0091ff]/10 text-[#0091ff]",
+          icon: "sync",
+        }
+      : sessionStatusRaw?.label === "Complete" && hasUnanalyzedFiles
+        ? null
+        : sessionStatusRaw;
   const csvReady = poll?.csvReady && jobId;
   const speciesTally = poll ? buildSpeciesTally(poll.files) : [];
 
@@ -916,6 +927,17 @@ export default function Home() {
                     </>
                   )}
 
+                  {submitting && (
+                    <button
+                      type="button"
+                      disabled
+                      className="hidden w-full items-center justify-center space-x-sm rounded-xl bg-primary py-4 text-headline-sm font-bold text-background opacity-80 md:flex"
+                    >
+                      <Icon name="sync" className="animate-spin" />
+                      <span>Analyzing…</span>
+                    </button>
+                  )}
+
                   {showBatchSummary && (
                     <div className="rounded-xl border border-outline-variant bg-surface-dim p-sm">
                       <div className="flex items-center justify-between gap-sm">
@@ -1119,9 +1141,21 @@ export default function Home() {
       </main>
 
       {view === "analysis" && (
-        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-outline-variant bg-surface-container/95 p-sm backdrop-blur-md md:hidden">
+        <div
+          className="fixed inset-x-0 bottom-0 z-[70] border-t border-outline-variant bg-surface-container/95 p-sm backdrop-blur-md md:hidden"
+          style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
+        >
           <div className="mx-auto flex max-w-content gap-sm">
-            {(analysisRunning || stopping) ? (
+            {submitting ? (
+              <button
+                type="button"
+                disabled
+                className="pointer-events-none flex min-h-12 flex-1 items-center justify-center gap-xs rounded-xl bg-primary font-bold text-background opacity-90"
+              >
+                <Icon name="sync" className="animate-spin" />
+                <span>Analyzing…</span>
+              </button>
+            ) : analysisRunning || stopping ? (
               <button
                 type="button"
                 disabled={stopping}
@@ -1144,9 +1178,9 @@ export default function Home() {
             )}
             <button
               type="button"
-              disabled={!csvReady}
+              disabled={!csvReady || submitting}
               onClick={downloadCsv}
-              className={`flex min-h-12 min-w-12 items-center justify-center rounded-xl border border-primary text-primary ${csvReady ? "" : "cursor-not-allowed opacity-40"}`}
+              className={`flex min-h-12 min-w-12 items-center justify-center rounded-xl border border-primary text-primary ${csvReady && !submitting ? "" : "cursor-not-allowed opacity-40"}`}
               aria-label="Download CSV"
             >
               <Icon name="download" />

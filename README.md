@@ -215,8 +215,8 @@ Use the same Vercel URL on your phone browser (Chrome or Safari).
 1. Open the site → tap the **menu** (☰) for Analysis, Log Library, or Import Log.
 2. On **Analysis**, tap **Choose photos**.
 3. In the phone’s file picker, open **Google Drive** (or Files) and select trap images (max 50 per run).
-4. Tap **Run Analysis** on the sticky bar at the bottom.
-5. When finished, tap the download icon for the CSV (and check Supabase if configured).
+4. Tap **Run Analysis** on the sticky bar at the bottom. Wait for **Analyzing…** to finish (on Vercel this can take a bit for each new batch).
+5. When finished, tap the download icon for the CSV (and check Supabase if configured). If a photo shows **Already done**, it was already in your log/Supabase — it will not be re-analyzed.
 
 Drive access is through the **phone’s picker**, not Google sign-in inside the app. Prefer small batches on Vercel Hobby (~60s limit). Desktop layout (folder upload + wide table) is unchanged on larger screens.
 
