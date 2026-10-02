@@ -218,7 +218,7 @@ Use the same Vercel URL on your phone browser (Chrome or Safari).
 4. Tap **Run Analysis** on the sticky bar at the bottom. Wait for **Analyzing…** to finish (on Vercel this can take a bit for each new batch).
 5. When finished, tap the download icon for the CSV (and check Supabase if configured). If a photo shows **Already done**, it was already in your log/Supabase — it will not be re-analyzed.
 
-Drive access is through the **phone’s picker**, not Google sign-in inside the app. Prefer small batches on Vercel Hobby (~60s limit). Desktop layout (folder upload + wide table) is unchanged on larger screens.
+Drive access is through the **phone’s picker**, not Google sign-in inside the app. Prefer small batches on Vercel Hobby (~60s limit). If Analyze returns instantly with an error about an **empty** photo, open that file once in Google Drive (so it downloads), then **Choose photos** again. Desktop layout (folder upload + wide table) is unchanged on larger screens.
 
 ### Host on Railway
 

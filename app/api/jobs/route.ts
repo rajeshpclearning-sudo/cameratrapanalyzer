@@ -87,10 +87,23 @@ async function handlePost(request: Request) {
   }[] = [];
 
   for (const entry of fileEntries) {
-    if (!(entry instanceof File)) continue;
+    // Node/undici may give File or Blob depending on runtime.
+    if (!(entry instanceof Blob)) continue;
     const buffer = Buffer.from(await entry.arrayBuffer());
-    const name = entry.name || "unknown.jpg";
-    const mime = entry.type || "application/octet-stream";
+    if (buffer.length === 0) {
+      const emptyName = entry instanceof File ? entry.name : "unknown.jpg";
+      return NextResponse.json(
+        {
+          error: `Photo "${emptyName}" arrived empty. On iPhone, open the file in Drive once, then pick it again.`,
+        },
+        { status: 400 },
+      );
+    }
+    const name = (entry instanceof File && entry.name) || "unknown.jpg";
+    const mime =
+      (entry instanceof File && entry.type) ||
+      entry.type ||
+      "application/octet-stream";
 
     if (!isAcceptedImage(mime, name)) {
       return NextResponse.json(
@@ -103,7 +116,10 @@ async function handlePost(request: Request) {
       buffer,
       name,
       mime,
-      lastModified: entry.lastModified || Date.now(),
+      lastModified:
+        entry instanceof File && entry.lastModified
+          ? entry.lastModified
+          : Date.now(),
     });
   }
 
@@ -114,9 +130,12 @@ async function handlePost(request: Request) {
   let existingCsvBuffer: Buffer | undefined;
   let existingCsvName: string | undefined;
   const csvEntry = formData.get("existingCsv");
-  if (csvEntry instanceof File && csvEntry.size > 0) {
+  if (csvEntry instanceof Blob && csvEntry.size > 0) {
     existingCsvBuffer = Buffer.from(await csvEntry.arrayBuffer());
-    existingCsvName = csvEntry.name;
+    existingCsvName =
+      csvEntry instanceof File && csvEntry.name
+        ? csvEntry.name
+        : "Camera_Trap_Analysis.csv";
   }
 
   const jobId = randomUUID();

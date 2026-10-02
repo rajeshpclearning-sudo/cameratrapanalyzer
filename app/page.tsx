@@ -376,9 +376,33 @@ export default function Home() {
     setSyncCsvContent(null);
 
     const form = new FormData();
-    for (const { file } of selected) {
-      form.append("files", file);
+    try {
+      for (const { file } of selected) {
+        // Re-read bytes before upload (iOS/Drive pickers can hand empty or stale File handles).
+        const buffer = await file.arrayBuffer();
+        if (buffer.byteLength === 0) {
+          setError(
+            `"${file.name}" has no data yet. Open it once in Google Drive/Files, then Choose photos again.`,
+          );
+          setSubmitting(false);
+          return;
+        }
+        const type =
+          file.type && file.type !== "application/octet-stream"
+            ? file.type
+            : "image/jpeg";
+        form.append("files", new File([buffer], file.name, { type }));
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? `Could not read photo: ${err.message}`
+          : "Could not read photo from the phone. Try Choose photos again.",
+      );
+      setSubmitting(false);
+      return;
     }
+
     if (existingCsv) {
       form.append("existingCsv", existingCsv);
     } else if (sessionCsv) {
@@ -424,7 +448,33 @@ export default function Home() {
         };
         setJobId(data.jobId);
         setPoll(syncPoll);
+        // Apply results immediately so the button does not flicker back to Run Analysis.
+        setCompletedByName((prev) => {
+          const next = { ...prev };
+          for (const f of syncPoll.files) {
+            if (
+              f.status === "done" ||
+              f.status === "skipped" ||
+              f.status === "already_done" ||
+              f.status === "error"
+            ) {
+              next[f.name] = f;
+            }
+          }
+          return next;
+        });
         if (data.csvContent) setSyncCsvContent(data.csvContent);
+
+        const already = data.stats?.alreadyAnalyzed ?? 0;
+        const llm = data.stats?.llmCalls ?? 0;
+        if (data.status === "failed" && (data.errors?.length ?? 0) > 0) {
+          setError(data.errors!.join("; "));
+        } else if (already > 0 && llm === 0) {
+          setError(null);
+        } else if ((data.errors?.length ?? 0) > 0) {
+          setError(data.errors!.join("; "));
+        }
+
         setSubmitting(false);
         setStopping(false);
         return;
@@ -777,8 +827,17 @@ export default function Home() {
         ) : (
           <>
             {error && (
-              <div className="mx-md mt-md rounded-xl border border-error/40 bg-error-container/20 px-md py-sm text-label-md text-error md:mx-lg">
+              <div className="mx-md mt-md hidden rounded-xl border border-error/40 bg-error-container/20 px-md py-sm text-label-md text-error md:mx-lg md:block">
                 {error}
+              </div>
+            )}
+
+            {/* Mobile: keep the latest error above the sticky Analyze bar */}
+            {error && (
+              <div className="fixed inset-x-0 bottom-[4.5rem] z-[75] px-sm md:hidden">
+                <div className="mx-auto max-w-content rounded-xl border border-error/40 bg-error-container px-md py-sm text-label-md text-error shadow-lg">
+                  {error}
+                </div>
               </div>
             )}
 
