@@ -1,6 +1,10 @@
 import "server-only";
 
-import { getSupabaseAdmin, isSupabaseConfigured } from "./supabase";
+import {
+  friendlySupabaseError,
+  getSupabaseAdmin,
+  isSupabaseConfigured,
+} from "./supabase";
 import { CSV_COL, ROW_STATUS, type CsvRow, type PersistSightingsResult } from "./types";
 import { lookupExistingSightings } from "./existing-sightings";
 
@@ -30,91 +34,92 @@ export async function persistSightings(
   rows: CsvRow[],
   options: PersistSightingsOptions = {},
 ): Promise<PersistSightingsResult> {
-  const configured = isSupabaseConfigured();
-  if (!configured) {
-    return { configured: false, inserted: 0 };
-  }
-
-  const serviceKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/[\u200B-\u200D\uFEFF]/g, "")
-      .trim()
-      .replace(/^["']|["']$/g, "") ?? "";
-  if (serviceKey.startsWith("sbp_")) {
-    return {
-      configured: true,
-      inserted: 0,
-      error:
-        "SUPABASE_SERVICE_ROLE_KEY is an account token (sbp_...). Use the project Secret key (sb_secret_...) from Supabase → Settings → API Keys.",
-    };
-  }
-  if (serviceKey.startsWith("sb_publishable_")) {
-    return {
-      configured: true,
-      inserted: 0,
-      error:
-        "SUPABASE_SERVICE_ROLE_KEY is the publishable key. Use the Secret key (sb_secret_...) instead.",
-    };
-  }
-  if (serviceKey && !serviceKey.startsWith("sb_secret_") && !serviceKey.startsWith("eyJ")) {
-    return {
-      configured: true,
-      inserted: 0,
-      error:
-        "SUPABASE_SERVICE_ROLE_KEY on the server is not a Secret key. Paste the value that starts with sb_secret_ (Settings → API Keys → Secret keys). Then Redeploy.",
-    };
-  }
-
-  let rowsToInsert = rows;
-  if (options.skipExistingPhotoNames && rows.length > 0) {
-    const existing = await lookupExistingSightings(
-      rows.map((r) => r[CSV_COL.photoName]),
-    );
-    rowsToInsert = rows.filter(
-      (r) => !existing.has(r[CSV_COL.photoName]?.trim()),
-    );
-  }
-
-  if (rowsToInsert.length === 0) {
-    return { configured: true, inserted: 0 };
-  }
-
-  let supabase;
   try {
-    supabase = getSupabaseAdmin();
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return { configured: true, inserted: 0, error: message };
-  }
+    const configured = isSupabaseConfigured();
+    if (!configured) {
+      return { configured: false, inserted: 0 };
+    }
 
-  if (!supabase) {
-    return {
-      configured: true,
-      inserted: 0,
-      error:
-        "Invalid SUPABASE_URL on server — use https://YOUR_PROJECT_REF.supabase.co (Settings → General), not the dashboard link. Then redeploy.",
-    };
-  }
+    const serviceKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/[\u200B-\u200D\uFEFF]/g, "")
+        .trim()
+        .replace(/^["']|["']$/g, "") ?? "";
+    if (serviceKey.startsWith("sbp_")) {
+      return {
+        configured: true,
+        inserted: 0,
+        error:
+          "SUPABASE_SERVICE_ROLE_KEY is an account token (sbp_...). Use the project Secret key (sb_secret_...) from Supabase → Settings → API Keys.",
+      };
+    }
+    if (serviceKey.startsWith("sb_publishable_")) {
+      return {
+        configured: true,
+        inserted: 0,
+        error:
+          "SUPABASE_SERVICE_ROLE_KEY is the publishable key. Use the Secret key (sb_secret_...) instead.",
+      };
+    }
+    if (
+      serviceKey &&
+      !serviceKey.startsWith("sb_secret_") &&
+      !serviceKey.startsWith("eyJ")
+    ) {
+      return {
+        configured: true,
+        inserted: 0,
+        error:
+          "SUPABASE_SERVICE_ROLE_KEY on the server is not a Secret key. Paste the value that starts with sb_secret_ (Settings → API Keys → Secret keys). Then Redeploy.",
+      };
+    }
 
-  try {
+    let rowsToInsert = rows;
+    if (options.skipExistingPhotoNames && rows.length > 0) {
+      const existing = await lookupExistingSightings(
+        rows.map((r) => r[CSV_COL.photoName]),
+      );
+      rowsToInsert = rows.filter(
+        (r) => !existing.has(r[CSV_COL.photoName]?.trim()),
+      );
+    }
+
+    if (rowsToInsert.length === 0) {
+      return { configured: true, inserted: 0 };
+    }
+
+    let supabase;
+    try {
+      supabase = getSupabaseAdmin();
+    } catch (err) {
+      return {
+        configured: true,
+        inserted: 0,
+        error: friendlySupabaseError(err),
+      };
+    }
+
+    if (!supabase) {
+      return {
+        configured: true,
+        inserted: 0,
+        error:
+          "Invalid SUPABASE_URL on server — use https://YOUR_PROJECT_REF.supabase.co (Settings → General), not the dashboard link. Then redeploy.",
+      };
+    }
+
     const { error } = await supabase
       .from("camera_trap_sightings")
       .insert(rowsToInsert.map((row) => rowToRecord(jobId, row)));
 
     if (error) {
-      const message = [error.message, error.code, error.details, error.hint]
-        .filter((part) => typeof part === "string" && part.trim())
-        .join(" — ") || "insert failed (empty error from Supabase)";
+      const message = friendlySupabaseError(error);
       console.error("[supabase] persist sightings failed:", message);
       return { configured: true, inserted: 0, error: message };
     }
 
     return { configured: true, inserted: rowsToInsert.length };
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    const friendly =
-      message.includes("fetch failed") || message.includes("ENOTFOUND")
-        ? `Cannot reach SUPABASE_URL (${process.env.SUPABASE_URL}). The project may be paused, deleted, or the URL/key is wrong.`
-        : message;
+    const friendly = friendlySupabaseError(err);
     console.error("[supabase] persist sightings failed:", friendly);
     return { configured: true, inserted: 0, error: friendly };
   }

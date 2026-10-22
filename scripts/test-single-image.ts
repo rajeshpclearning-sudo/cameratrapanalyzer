@@ -17,9 +17,9 @@ async function main(): Promise<void> {
 
   console.log(`Image: ${imagePath} (${(raw.length / 1024).toFixed(1)} KB)`);
 
-  const jpeg = await decodeToJpeg(raw);
-  const { date, timestamp } = await extractDateTime(jpeg, new Date());
+  const { date, timestamp } = await extractDateTime(raw, new Date());
   console.log(`Date/time (EXIF or fallback): ${date} ${timestamp}`);
+  const jpeg = await decodeToJpeg(raw);
 
   console.log("Calling vision LLM…");
   const analysis = await analyzeImage(jpeg);

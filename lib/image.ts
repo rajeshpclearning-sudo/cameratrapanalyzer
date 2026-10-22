@@ -5,7 +5,7 @@ export { isAcceptedImage, isHeic } from "./image-accept";
 const MAX_EDGE = 1024;
 const JPEG_QUALITY = 85;
 
-/** Decode any accepted format to JPEG bytes for EXIF + LLM. */
+/** Decode any accepted format to JPEG bytes for the LLM (EXIF is stripped — read dates from the original buffer first). */
 export async function decodeToJpeg(buffer: Buffer): Promise<Buffer> {
   return sharp(buffer)
     .rotate()

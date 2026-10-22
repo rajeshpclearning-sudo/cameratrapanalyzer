@@ -55,7 +55,7 @@ function keyKind(key: string): string {
   return `other_len_${key.length}`;
 }
 
-function formatUnknownError(err: unknown): string {
+function rawErrorText(err: unknown): string {
   if (err && typeof err === "object") {
     const o = err as {
       message?: string;
@@ -63,11 +63,16 @@ function formatUnknownError(err: unknown): string {
       details?: string;
       hint?: string;
       status?: number;
+      cause?: unknown;
     };
     const parts = [o.message, o.code, o.details, o.hint]
       .map((p) => (typeof p === "string" ? p.trim() : ""))
       .filter(Boolean);
     if (o.status) parts.push(`status ${o.status}`);
+    if (o.cause) {
+      const causeText = rawErrorText(o.cause);
+      if (causeText) parts.push(`Caused by: ${causeText}`);
+    }
     if (parts.length > 0) return parts.join(" — ");
     try {
       const dumped = JSON.stringify(err);
@@ -76,9 +81,58 @@ function formatUnknownError(err: unknown): string {
       // fall through
     }
   }
-  if (err instanceof Error && err.message) return err.message;
+  if (err instanceof Error) {
+    const base = err.message || err.name;
+    const cause =
+      "cause" in err && err.cause != null ? rawErrorText(err.cause) : "";
+    return cause ? `${base} — Caused by: ${cause}` : base;
+  }
   const asString = String(err ?? "");
   return asString.trim() || "unknown error (empty message)";
+}
+
+/**
+ * Turn network/DNS failures into a short, actionable message.
+ * ENOTFOUND means the Project URL host does not exist (deleted/paused/wrong ref).
+ */
+export function friendlySupabaseError(err: unknown, urlHint?: string): string {
+  const raw = rawErrorText(err);
+  const host =
+    urlHint ||
+    (() => {
+      try {
+        const u = normalizeSupabaseUrl(envTrim("SUPABASE_URL"));
+        return u ? new URL(u).hostname : undefined;
+      } catch {
+        return undefined;
+      }
+    })();
+
+  if (
+    /ENOTFOUND|getaddrinfo|ERR_NAME_NOT_RESOLVED|Name or service not known/i.test(
+      raw,
+    )
+  ) {
+    return (
+      `Supabase project host not found${host ? ` (${host})` : ""}. ` +
+      "That project was deleted or the SUPABASE_URL is wrong. " +
+      "In Supabase → Settings → General, copy the live Project URL " +
+      "(https://YOUR_REF.supabase.co), put it in Vercel Production env + .env.local with a new Secret key, then Redeploy."
+    );
+  }
+
+  if (/fetch failed|ECONNREFUSED|ETIMEDOUT|network/i.test(raw)) {
+    return (
+      `Cannot reach Supabase${host ? ` (${host})` : ""}. ` +
+      "Check that the project is not paused, SUPABASE_URL is the Project URL (not a dashboard link), and Redeploy after fixing env vars."
+    );
+  }
+
+  return raw;
+}
+
+function formatUnknownError(err: unknown): string {
+  return friendlySupabaseError(err);
 }
 
 /** True when env vars are set and URL looks like a project API host. */

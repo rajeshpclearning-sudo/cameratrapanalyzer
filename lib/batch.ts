@@ -162,8 +162,10 @@ async function processLeader(
       throw new Error(`Unsupported file type: ${mime || "unknown"}`);
     }
 
+    // Read date/time from the *original* bytes — decodeToJpeg re-encodes and
+    // strips EXIF, which made us fall back to file lastModified (often "today").
+    const { date, timestamp } = await getDateTime(buffer, lastModified);
     const jpeg = await decodeToJpeg(buffer);
-    const { date, timestamp } = await getDateTime(jpeg, lastModified);
 
     if (SKIP_EMPTY && (await isLikelyEmptyFrame(jpeg))) {
       const row = emptyFrameRow(name, date, timestamp);
@@ -199,8 +201,11 @@ async function processFollower(
   updateJob(jobId, { files });
 
   try {
+    const { date, timestamp } = await getDateTime(
+      file.buffer,
+      file.lastModified,
+    );
     const jpeg = await decodeToJpeg(file.buffer);
-    const { date, timestamp } = await getDateTime(jpeg, file.lastModified);
     const row = copyAnalysisRow(file.name, date, timestamp, leaderRow);
     markFile(jobId, index, { name: file.name, status: "done", row });
     incrementStats(jobId, "burstCopied");
