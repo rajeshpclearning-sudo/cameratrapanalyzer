@@ -589,7 +589,9 @@ Use JSON schema / structured output (OpenAI `json_schema` or Gemini JSON mode).
 
 ### Prompt guidelines
 
-- Forest camera trap; **common English names** only.
+- Forest camera trap at **FFS Station C8, Wayanad**; **common English names** only.
+- Station species rules live in [`lib/llm/ffs-c8-rules.md`](lib/llm/ffs-c8-rules.md) and are injected into **every** vision call by `lib/llm/analyze.ts`.
+- Agent skill for maintaining those rules: [`.cursor/skills/ffs-c8-photo-analysis/SKILL.md`](.cursor/skills/ffs-c8-photo-analysis/SKILL.md) (on accuracy feedback: update the rules file, log the correction, commit + push).
 - Count **visible** individuals only.
 - Behavior enum: `foraging`, `moving`, `standing`, `resting`, `drinking`, `running`, `unknown`, `N/A`.
 - **Do not** ask the LLM for date or time — use EXIF and Drive metadata only.
@@ -689,6 +691,7 @@ Rough savings: downscaling 50–80% image tokens; skipping empty frames 30–70%
 │   ├── google.ts
 │   ├── exif.ts
 │   ├── llm/analyze.ts
+│   ├── llm/ffs-c8-rules.md       # FFS Station C8 species rules (every vision call)
 │   ├── supabase.ts               # Optional Supabase client (server)
 │   ├── persist-sightings.ts      # Insert analysis rows after jobs
 │   ├── sheets.ts                 # Resolve append vs create, append rows

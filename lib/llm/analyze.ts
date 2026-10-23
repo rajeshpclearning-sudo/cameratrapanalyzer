@@ -1,26 +1,52 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import OpenAI from "openai";
 import type { LlmAnalysis } from "../types";
 
-const SYSTEM_PROMPT = `You analyze forest camera-trap photographs from India.
-Return JSON only. Use common English species names (no scientific names).
+const BASE_SYSTEM_PROMPT = `You analyze forest camera-trap photographs from India (FFS Station C8, Wayanad, Kerala).
+Return JSON only. Use common English species names in species_common (scientific names may appear in the station rules for reference only — do not put them in JSON fields).
 Count only visible individuals.
+Apply the station classification rules below strictly — they override generic wildlife knowledge when they conflict.
 
 When an animal IS visible:
-- species_common: common name (or "Human", or "Unidentified" if unclear)
+- species_common: common name from the station rules (or "Human", or "Unidentified" if unclear)
 - individual_count: integer count of visible animals
 - individuals_description: same count as a string (e.g. "2")
 - behavior: one of foraging, moving, standing, resting, drinking, running, unknown
 
 When NO animal is visible:
 - has_animal: false
-- species_common: descriptive scene text starting with "No animal –" (what is seen in the photo)
+- species_common: "No animal detected" (or "No animal – …" with a short scene note; or "Partial animal visible at frame edge — species unconfirmed" per station rules)
 - individual_count: 0
 - individuals_description: short text describing absence (e.g. "No animals visible")
 - behavior: brief scene/activity description (what is seen — not "N/A" or "Not Applicable")
 
 Other rules:
 - If humans are visible: has_human true, species_common "Human" (or "Human (N individuals)" if count > 1)
-- Do not guess rare species when uncertain.`;
+- Do not guess rare species when uncertain.
+- For background/secondary animals, follow the station verification rules (eye-shine alone is not enough).`;
+
+let cachedStationRules: string | null = null;
+
+/** FFS Station C8 rules — edited when accuracy feedback improves identification. */
+export function loadStationClassificationRules(): string {
+  if (cachedStationRules != null) return cachedStationRules;
+  const path = join(process.cwd(), "lib/llm/ffs-c8-rules.md");
+  try {
+    cachedStationRules = readFileSync(path, "utf8").trim();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn("[llm] could not load ffs-c8-rules.md:", message);
+    cachedStationRules = "";
+  }
+  return cachedStationRules;
+}
+
+function buildSystemPrompt(): string {
+  const rules = loadStationClassificationRules();
+  if (!rules) return BASE_SYSTEM_PROMPT;
+  return `${BASE_SYSTEM_PROMPT}\n\n---\nSTATION CLASSIFICATION RULES (mandatory):\n\n${rules}`;
+}
 
 const responseSchema = {
   type: "json_schema" as const,
@@ -134,13 +160,13 @@ export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
   const response = await openai.chat.completions.create({
     model: getModel(),
     messages: [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: buildSystemPrompt() },
       {
         role: "user",
         content: [
           {
             type: "text",
-            text: "Analyze this camera-trap image.",
+            text: "Analyze this camera-trap image using the FFS Station C8 classification rules.",
           },
           {
             type: "image_url",

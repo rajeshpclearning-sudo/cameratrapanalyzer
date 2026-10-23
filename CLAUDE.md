@@ -50,7 +50,7 @@ Browser (page.tsx)
 
 **Already-analyzed skip.** Before grouping bursts, `resolveAlreadyAnalyzed` checks photo names against the uploaded/session CSV and Supabase (`camera_trap_sightings.photo_name`). Matches are marked `already_done` (prior row reused) — no LLM call and no second insert. `persistSightings(..., { skipExistingPhotoNames: true })` is a second safety net on write.
 
-**LLM provider abstraction.** `lib/llm/analyze.ts` uses the `openai` package pointed at either OpenAI or OpenRouter (detected by `sk-or-` key prefix or `OPENAI_BASE_URL`). Model is set via `LLM_MODEL` (default `gpt-4o-mini`). The LLM returns structured JSON via `response_format: json_schema`. Date/time is **never** sourced from the LLM — always from EXIF.
+**LLM provider abstraction.** `lib/llm/analyze.ts` uses the `openai` package pointed at either OpenAI or OpenRouter (detected by `sk-or-` key prefix or `OPENAI_BASE_URL`). Model is set via `LLM_MODEL` (default `gpt-4o-mini`). The LLM returns structured JSON via `response_format: json_schema`. Date/time is **never** sourced from the LLM — always from EXIF. Every vision call also loads **FFS Station C8** species rules from `lib/llm/ffs-c8-rules.md`. Agent skill `.cursor/skills/ffs-c8-photo-analysis/SKILL.md` says how to tighten those rules from accuracy feedback and push to GitHub.
 
 **CSV column contract.** `lib/types.ts` defines `CSV_HEADER` and `CSV_COL` indices. `CsvRow` is a 7-tuple. Everything in the pipeline — LLM output normalization, burst copy, CSV build, Supabase insert, import parsing — maps through these indices. Changing column order requires updating all of these.
 

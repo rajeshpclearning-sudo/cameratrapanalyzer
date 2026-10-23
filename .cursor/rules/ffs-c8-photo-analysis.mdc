@@ -1,0 +1,12 @@
+---
+description: FFS Station C8 classification rules for every photo analysis and accuracy fixes
+alwaysApply: true
+---
+
+# FFS Station C8 photo analysis
+
+Before changing species identification, the vision prompt, or responding to a wrong-species / accuracy report:
+
+1. Read and follow `.cursor/skills/ffs-c8-photo-analysis/SKILL.md`.
+2. Canonical rules for the live analyzer are in `lib/llm/ffs-c8-rules.md` (loaded on every photo by `lib/llm/analyze.ts`).
+3. On accuracy feedback: update `lib/llm/ffs-c8-rules.md`, append the Corrections log in the skill, then **commit and push to GitHub** so Vercel redeploys improved rules.

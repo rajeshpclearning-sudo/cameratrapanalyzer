@@ -5,7 +5,11 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["xlsx", "sharp"],
   // sharp uses platform-specific @img/* binaries; include them in standalone traces.
   outputFileTracingIncludes: {
-    "/api/**/*": ["./node_modules/sharp/**/*", "./node_modules/@img/**/*"],
+    "/api/**/*": [
+      "./node_modules/sharp/**/*",
+      "./node_modules/@img/**/*",
+      "./lib/llm/ffs-c8-rules.md",
+    ],
   },
   webpack: (config, { isServer }) => {
     if (!isServer) {
