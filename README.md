@@ -1,14 +1,16 @@
-# Camera Trap Photo Analyzer
+# Camera Trap Photo Analyzer (WildEye Analyzer)
 
 ## What this app does
 
-**Camera Trap Photo Analyzer** helps researchers and field teams turn **camera-trap photos** into a **structured wildlife log** (spreadsheet). For each image, the app records **when** the photo was taken, **what species** appeared (common name only), **how many** individuals, and **what they were doing** (foraging, moving, standing, etc.). Empty frames and human detections are handled with explicit rules.
+**WildEye Analyzer** (Camera Trap Photo Analyzer) helps researchers and field teams turn **camera-trap photos** into a **structured wildlife log** (spreadsheet). For each image, the app records **when** the photo was taken (from EXIF on the original file), **what species** appeared (common name only), **how many** individuals, and **what they were doing** (foraging, moving, standing, etc.). Empty frames and human detections are handled with explicit rules.
 
-**Today (local MVP):** User picks photos from their computer → AI analyzes each image → user **downloads a CSV** (or appends to an existing log file).
+**Today (shipped):** Pick photos on desktop or phone (including Google Drive via the phone file picker) → vision AI analyzes each image using **FFS Station C8, Wayanad** species rules → **download a CSV** and optionally **save rows to Supabase**. Hosted on **Vercel** (sync analysis) or **Railway** (background jobs + polling). Photos already in the session CSV or Supabase are skipped (**Already done**).
 
 **Planned (full product):** User signs in with Google → picks a **Drive folder** of trap images → AI analyzes → results **append to a Google Sheet** in the same folder (create sheet if none exists).
 
-**Context:** Forest camera traps (e.g. India); primary subjects are wild animals; humans and blank triggers are common edge cases.
+**Context:** Forest camera traps in India — field rules tuned for **Forest First Samithi (FFS) Station C8, Wayanad, Kerala**. Primary subjects are wild animals; humans and blank triggers are common edge cases.
+
+**Overview document:** [Camera_Trap_App_Overview.docx](Camera_Trap_App_Overview.docx) — short Word summary of the app for sharing outside the repo.
 
 ---
 
@@ -85,7 +87,7 @@ flowchart TD
 
 | Zone | Content | Components |
 |------|---------|------------|
-| **Header** | Title + one-line subtitle | `H1` “Camera Trap Analyzer”; subtitle explains local MVP or product tagline |
+| **Header** | Title + one-line subtitle | Product name **WildEye Analyzer**; subtitle explains local / Vercel MVP |
 | **Global error** | Validation / API errors | Banner (red border); e.g. max 50 files, missing API key, HEIC rejected |
 | **Section 1 — Select images** | Ingest | Section card; labels “Folder” and “Or individual files”; native file inputs; hint text (formats, max 50); toolbar: Select all, Deselect all, Remove selected; scrollable **file list** (checkbox + filename); counter “N of M selected” |
 | **Section 2 — Optional log** | Append mode | Section card; CSV file input; hint “Will append to: {filename}” when chosen |
@@ -178,6 +180,10 @@ Each analyzed photo becomes **one row**. Designers can mock this as a table or G
 | **Import Log** — Excel/CSV upload to Supabase (sidebar) | Done |
 | **Empty-frame skip** (no LLM on uniform frames) | Done |
 | **Burst deduplication** (shots within 2s share one LLM call) | Done |
+| **Skip already-analyzed** photo names (session CSV + Supabase) | Done |
+| **EXIF date/time** from original bytes (before JPEG resize) | Done |
+| **FFS Station C8** species rules on every vision call (`lib/llm/ffs-c8-rules.md`) | Done |
+| Phone-first UI + Drive picker path on Vercel | Done |
 | Railway deploy config (`railway.toml`, `/api/health`) | Done |
 | Vercel deploy (sync analysis in one request) | Done |
 
@@ -696,7 +702,11 @@ Rough savings: downscaling 50–80% image tokens; skipping empty frames 30–70%
 │   ├── persist-sightings.ts      # Insert analysis rows after jobs
 │   ├── sheets.ts                 # Resolve append vs create, append rows
 │   └── jobs.ts
+├── .cursor/
+│   ├── skills/ffs-c8-photo-analysis/  # Accuracy feedback → update rules + push
+│   └── rules/ffs-c8-photo-analysis.mdc
 ├── supabase/schema.sql           # One-time table setup for optional backup
+├── Camera_Trap_App_Overview.docx # Shareable app overview
 ├── prisma/schema.prisma
 ├── railway.toml
 └── .env.example
@@ -760,8 +770,8 @@ Rough savings: downscaling 50–80% image tokens; skipping empty frames 30–70%
 
 | Risk | Mitigation |
 |------|------------|
-| Wrong species | Structured JSON; allow `Unidentified` |
-| Missing EXIF | Drive metadata → filename → avoid LLM for datetime |
+| Wrong species | FFS Station C8 rules in every prompt; structured JSON; allow `Unidentified`; tighten `ffs-c8-rules.md` from accuracy feedback |
+| Missing EXIF | Read EXIF before resize; else file `lastModified` (not analysis “today” by design); Drive metadata / filename planned |
 | Token expiry | Refresh tokens; re-auth prompt |
 | Long batches | Background jobs on Railway |
 | HEIC files | Convert or clear error in v1 |
@@ -772,12 +782,16 @@ Rough savings: downscaling 50–80% image tokens; skipping empty frames 30–70%
 
 - [x] Local MVP + Path A: HEIC, thumbnails, preview, log library, empty/burst optimizations
 - [x] Optional Supabase persistence for analysis rows (no app auth)
+- [x] Skip photo names already in session CSV / Supabase
+- [x] EXIF date/time from original image bytes (not post-resize JPEG)
+- [x] FFS Station C8 classification rules + Cursor skill for accuracy updates
+- [x] Vercel deploy (sync `POST /api/jobs`) + phone-first / Drive picker UX
 - [x] Railway deploy files (`railway.toml`, health check)
+- [x] App overview Word doc (`Camera_Trap_App_Overview.docx`)
 - [ ] Document GCP setup (Drive, Sheets, OAuth, redirect URIs)
 - [ ] Google OAuth + Prisma on Railway Postgres
-- [ ] Drive folder browser (thumbnails, multi-select)
+- [ ] In-app Drive folder browser (thumbnails, multi-select) — phone OS picker is available today
 - [ ] Google Sheet resolve: append to existing `Camera_Trap_Analysis*` in folder, else create
-- [ ] Railway deploy
 
 ---
 
