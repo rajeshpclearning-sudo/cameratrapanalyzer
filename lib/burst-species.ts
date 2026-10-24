@@ -8,6 +8,19 @@ export function isHumanSpecies(species: string): boolean {
   return species.trim().toLowerCase().includes("human");
 }
 
+/** Human clearly carrying/holding a weapon (dashboard red alert). */
+export function isArmedHumanSpecies(species: string): boolean {
+  const s = species.trim().toLowerCase();
+  if (!s.includes("human")) return false;
+  return (
+    s.includes("armed") ||
+    s.includes("weapon") ||
+    s.includes("gun") ||
+    s.includes("rifle") ||
+    s.includes("firearm")
+  );
+}
+
 export function isEmptySpecies(species: string): boolean {
   const s = species.toLowerCase();
   return (

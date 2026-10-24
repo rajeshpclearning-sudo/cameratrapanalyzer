@@ -25,6 +25,7 @@ When TRULY empty (no wildlife AND no person AND no human legs/feet/hands/fingers
 
 Other rules:
 - Humans (this frame only): If you see a person, legs/feet, fingers/hand, bag, sandals, shoes, or backpack → has_human true, has_animal true, species_common "Human", count people (use 1 if only legs+bag or only fingers). NEVER output empty / "no human or animal visible" for those frames. Never invent humans from neighboring burst photos.
+- Weapons: If a human clearly holds/carries a gun, rifle, firearm, bow, spear, machete, or similar weapon → has_weapon true and species_common "Human (armed)". Otherwise has_weapon false.
 - Do not invent rare/exotic species; for clear partial Indian wildlife (elephant, deer, etc.), do make an intelligent guess.
 - Never use "Partial animal visible at frame edge — species unconfirmed" as species_common.
 - For background/secondary animals, follow the station verification rules (eye-shine alone is not enough).`;
@@ -65,6 +66,7 @@ const responseSchema = {
         behavior: { type: "string" },
         has_animal: { type: "boolean" },
         has_human: { type: "boolean" },
+        has_weapon: { type: "boolean" },
       },
       required: [
         "species_common",
@@ -73,6 +75,7 @@ const responseSchema = {
         "behavior",
         "has_animal",
         "has_human",
+        "has_weapon",
       ],
       additionalProperties: false,
     },
@@ -149,6 +152,7 @@ function normalizeNoAnimalAnalysis(parsed: LlmAnalysis): LlmAnalysis {
   }
   parsed.individual_count = 0;
   parsed.has_human = false;
+  parsed.has_weapon = false;
   return parsed;
 }
 
@@ -183,6 +187,29 @@ function looksLikeEmptyDenial(text: string): boolean {
   );
 }
 
+function looksLikeWeapon(text: string): boolean {
+  const s = text.toLowerCase();
+  return (
+    /\b(gun|rifle|shotgun|pistol|firearm|handgun)\b/.test(s) ||
+    /\b(bow|crossbow|spear|machete|sword)\b/.test(s) ||
+    s.includes("weapon") ||
+    s.includes("armed")
+  );
+}
+
+function applyArmedHumanLabel(parsed: LlmAnalysis): void {
+  const armed =
+    parsed.has_weapon === true ||
+    looksLikeWeapon(parsed.species_common ?? "") ||
+    looksLikeWeapon(parsed.behavior ?? "");
+  if (armed && parsed.has_human) {
+    parsed.has_weapon = true;
+    parsed.species_common = "Human (armed)";
+  } else {
+    parsed.has_weapon = false;
+  }
+}
+
 export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
   const base64 = jpegBuffer.toString("base64");
   const openai = getClient();
@@ -199,7 +226,9 @@ export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
             text:
               "Analyze this camera-trap image using the FFS Station C8 classification rules. " +
               "Look carefully for people, human legs/feet, fingers/hands, and belongings (bag, sandals). " +
-              "If any of those are present, this is NOT an empty frame — use Human.",
+              "If any of those are present, this is NOT an empty frame — use Human. " +
+              "If a person clearly carries or holds a weapon (gun, rifle, bow, spear, machete, etc.), " +
+              "set has_weapon true and species_common to Human (armed).",
           },
           {
             type: "image_url",
@@ -233,9 +262,11 @@ export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
     }
     if (parsed.individual_count < 1) parsed.individual_count = 1;
     normalizeAnimalAnalysis(parsed);
+    applyArmedHumanLabel(parsed);
   } else if (!parsed.has_animal) {
     normalizeNoAnimalAnalysis(parsed);
   } else {
+    parsed.has_weapon = false;
     normalizeAnimalAnalysis(parsed);
   }
 
@@ -245,7 +276,10 @@ export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
     parsed.has_animal = true;
     if (parsed.individual_count < 1) parsed.individual_count = 1;
     normalizeAnimalAnalysis(parsed);
+    applyArmedHumanLabel(parsed);
   }
+
+  if (!parsed.has_human) parsed.has_weapon = false;
 
   return parsed;
 }

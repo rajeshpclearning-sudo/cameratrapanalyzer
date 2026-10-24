@@ -13,6 +13,7 @@ import { readApiJson } from "@/lib/api-client";
 import { getSessionStatusDisplay } from "@/lib/file-status-display";
 import { CSV_COL } from "@/lib/types";
 import type { CsvRow, FileJobState, JobPollResponse, JobStats } from "@/lib/types";
+import { isArmedHumanSpecies } from "@/lib/burst-species";
 import { buildSpeciesTally } from "@/lib/species-tally";
 import {
   buildExifOverridesPayload,
@@ -1472,15 +1473,32 @@ export default function Home() {
                         Species found
                       </p>
                       <div className="flex flex-wrap gap-xs">
-                        {speciesTally.map(({ species, count }) => (
-                          <span
-                            key={species}
-                            className="inline-flex items-center gap-1 rounded-full border border-outline-variant bg-surface-container px-sm py-0.5 font-mono text-[10px]"
-                          >
-                            <span className="text-on-surface">{species}</span>
-                            <span className="font-bold text-primary">×{count}</span>
-                          </span>
-                        ))}
+                        {speciesTally.map(({ species, count }) => {
+                          const armed = isArmedHumanSpecies(species);
+                          return (
+                            <span
+                              key={species}
+                              className={`inline-flex items-center gap-1 rounded-full border px-sm py-0.5 font-mono text-[10px] ${
+                                armed
+                                  ? "border-error/50 bg-error-container/20"
+                                  : "border-outline-variant bg-surface-container"
+                              }`}
+                            >
+                              <span
+                                className={
+                                  armed ? "font-bold text-error" : "text-on-surface"
+                                }
+                              >
+                                {species}
+                              </span>
+                              <span
+                                className={`font-bold ${armed ? "text-error" : "text-primary"}`}
+                              >
+                                ×{count}
+                              </span>
+                            </span>
+                          );
+                        })}
                       </div>
                     </div>
                   )}

@@ -1,5 +1,6 @@
 "use client";
 
+import { isArmedHumanSpecies } from "@/lib/burst-species";
 import type { CsvRow } from "@/lib/types";
 
 type Props = {
@@ -28,6 +29,8 @@ export function PreviewModal({
   error,
 }: Props) {
   if (!open) return null;
+
+  const armedHuman = row ? isArmedHumanSpecies(row[3] ?? "") : false;
 
   return (
     <div
@@ -74,6 +77,12 @@ export function PreviewModal({
           <p className="mb-sm text-label-md text-error">{error}</p>
         )}
 
+        {armedHuman && (
+          <p className="mb-sm rounded-lg border border-error/40 bg-error-container/20 px-md py-sm font-mono text-label-md font-bold text-error">
+            Weapon detected with human — review this frame carefully.
+          </p>
+        )}
+
         {row ? (
           <table className="w-full border-collapse text-label-md">
             <tbody>
@@ -87,7 +96,13 @@ export function PreviewModal({
               ].map(([label, value]) => (
                 <tr key={label} className="border-b border-outline-variant/30">
                   <td className="py-2 pr-md text-on-surface-variant">{label}</td>
-                  <td className="py-2 font-medium">{value}</td>
+                  <td
+                    className={`py-2 font-medium ${
+                      label === "Species Name" && armedHuman ? "text-error" : ""
+                    }`}
+                  >
+                    {value}
+                  </td>
                 </tr>
               ))}
             </tbody>

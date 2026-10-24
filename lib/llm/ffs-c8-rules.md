@@ -57,6 +57,13 @@ Treat as **Human** (`has_human` true **and** `has_animal` true) when **any** of 
 
 **Important:** A frame with a person + bag + legs is **not** empty. Always set `has_animal: true` whenever `has_human: true` (do not treat "human" as excluding animal-presence flags).
 
+Weapons (dashboard alert):
+
+- If any human in this frame is clearly carrying or holding a **weapon** (gun, rifle, shotgun, pistol, firearm, bow, crossbow, spear, machete, axe used as a weapon, sword, or similar), set `has_weapon: true` and use `species_common` **"Human (armed)"**.
+- Note the weapon type briefly in `behavior` (e.g. "standing with rifle").
+- If humans are present but **no** weapon is clearly visible, set `has_weapon: false` and use **Human** as usual.
+- Do **not** set `has_weapon` for ordinary tools that are clearly not weapons (phone, walking stick, bag straps, camera). When unsure whether an object is a weapon, set `has_weapon: false`.
+
 Counting:
 
 - `individual_count` = number of **distinct people** you can reasonably infer in this frame (bodies/faces). If only belongings or only a hand/fingers are visible, use **1**.

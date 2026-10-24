@@ -60,6 +60,7 @@ Full text lives in `lib/llm/ffs-c8-rules.md`. Apply strictly:
 8. **Empty frames** — "No animal detected" only when truly empty.
 9. **Partial / edge-of-frame** — intelligent species guess + count (not "No animal" / not unconfirmed partial phrase).
 10. **Humans** — per-frame only; include body parts (fingers) and belongings (bag/sandals); correct count; never invent or miss people across burst neighbors.
+11. **Armed humans** — if a person clearly carries/holds a weapon, `has_weapon` true and species **Human (armed)** (dashboard shows these rows in red).
 
 ## Corrections log
 
@@ -67,6 +68,7 @@ Append newest entries at the top.
 
 | Date | Issue | Rule change |
 |------|--------|-------------|
+| 2026-10-24 | Highlight humans with weapons in red on dashboard | Rule 10 weapons subsection; `has_weapon` in vision JSON; species **Human (armed)**; UI red row/badge |
 | 2026-10-24 | I__00134 still empty despite person+bag+legs | Fix normalize bug (has_human with has_animal false was forced to empty); vision detail high; Rule 10 requires has_animal true with has_human; legs+bag called out |
 | 2026-10-24 | I__00134 bag+sandals labeled empty; I__00142 three fingers on camera not reported | Rule 10 expanded: human belongings and body parts (fingers/hand) → Human (count 1 if only parts/gear); never "no human or animal visible" |
 | 2026-10-24 | I__00126–128 labeled Human though empty of people; I__00130 had 3 humans; I__00131 had 3 humans but "no animals"; I__00133–134 wrongly got 3 humans | Rule 10 (humans per frame); burst copy no longer propagates Human or empty-frame labels to followers; Human excluded as burst reconcile anchor |

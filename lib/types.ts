@@ -41,6 +41,8 @@ export type LlmAnalysis = {
   behavior: string;
   has_animal: boolean;
   has_human: boolean;
+  /** True when a human is clearly carrying or holding a weapon. */
+  has_weapon: boolean;
 };
 
 export type FileJobStatus =

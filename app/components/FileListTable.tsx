@@ -1,6 +1,7 @@
 "use client";
 
 import { getAnalysisDisplay } from "@/lib/analysis-display";
+import { isArmedHumanSpecies } from "@/lib/burst-species";
 import { getFileStatusDisplay } from "@/lib/file-status-display";
 import type { FileJobState, JobPollResponse } from "@/lib/types";
 
@@ -81,11 +82,16 @@ export function FileListTable({
               const statusDisplay = getFileStatusDisplay(status, jobStatus);
               const analysis = getAnalysisDisplay(pollFile);
               const isAnalyzing = pollFile?.status === "analyzing";
+              const armedHuman = isArmedHumanSpecies(analysis.species);
 
               return (
                 <li
                   key={item.id}
-                  className={`flex items-stretch gap-sm px-sm py-sm ${statusDisplay.rowClass} ${isAnalyzing ? "pulsing-blue" : ""}`}
+                  className={`flex items-stretch gap-sm px-sm py-sm ${
+                    armedHuman
+                      ? "border-l-4 border-l-error bg-error-container/20"
+                      : statusDisplay.rowClass
+                  } ${isAnalyzing ? "pulsing-blue" : ""}`}
                 >
                   <label
                     className="flex min-h-11 min-w-11 shrink-0 items-center justify-center"
@@ -132,7 +138,13 @@ export function FileListTable({
                           {statusDisplay.label}
                         </span>
                         {analysis.species !== "—" && (
-                          <span className="truncate font-mono text-[10px] text-on-surface-variant">
+                          <span
+                            className={`truncate font-mono text-[10px] ${
+                              armedHuman
+                                ? "font-bold text-error"
+                                : "text-on-surface-variant"
+                            }`}
+                          >
                             {analysis.species}
                           </span>
                         )}
@@ -193,11 +205,16 @@ export function FileListTable({
                 const analysis = getAnalysisDisplay(pollFile);
                 const isError = pollFile?.status === "error";
                 const isAnalyzing = pollFile?.status === "analyzing";
+                const armedHuman = isArmedHumanSpecies(analysis.species);
 
                 return (
                   <tr
                     key={item.id}
-                    className={`cursor-pointer border-b border-outline-variant/30 transition-colors hover:bg-surface-container-highest ${statusDisplay.rowClass} ${isAnalyzing ? "pulsing-blue" : ""}`}
+                    className={`cursor-pointer border-b border-outline-variant/30 transition-colors hover:bg-surface-container-highest ${
+                      armedHuman
+                        ? "border-l-4 border-l-error bg-error-container/20"
+                        : statusDisplay.rowClass
+                    } ${isAnalyzing ? "pulsing-blue" : ""}`}
                     onClick={() => onOpenPreview(item)}
                   >
                     <td
@@ -249,13 +266,19 @@ export function FileListTable({
                     </td>
                     <td
                       className={`${tdClass} max-w-[180px] truncate ${
-                        isError
-                          ? "text-error"
+                        isError || armedHuman
+                          ? "font-bold text-error"
                           : isAnalyzing
                             ? "text-[#0091ff]"
                             : "text-on-surface-variant"
                       }`}
-                      title={isError ? analysis.species : undefined}
+                      title={
+                        armedHuman
+                          ? "Human with weapon detected"
+                          : isError
+                            ? analysis.species
+                            : undefined
+                      }
                     >
                       {analysis.species}
                     </td>
