@@ -49,11 +49,13 @@ If any animal tissue is clearly visible at the frame edge or mostly leaving/ente
 
 People walk in and out between consecutive trap shots. Classify **only what is visible in this image**.
 
-Treat as **Human** (`has_human` true) when **any** of these are clearly visible in this frame:
+Treat as **Human** (`has_human` true **and** `has_animal` true) when **any** of these are clearly visible in this frame:
 
-- Whole or partial person (face, body, clothing, silhouette)
+- Whole or partial person (face, body, clothing, silhouette), including **legs/feet** with or without a bag
 - **Human body parts at the camera or in frame** — e.g. fingers, hand, palm, arm, foot (even if only fingertips touch or enter the lens). Example: three fingers on the camera → **Human**, count `1` (one person), behavior noting hand/fingers at camera — do **not** leave this as empty or unspecified
-- **Clear human belongings / gear in the scene** that indicate a person (bag, backpack, sandals, shoes, water bottle, phone, clothing on the ground, etc.) with no wildlife that explains them. Example: bag and sandals visible → **Human**, count `1` unless more people are also visible — never "No animal detected" / "no human or animal visible"
+- **Clear human belongings / gear in the scene** that indicate a person (bag, backpack, sandals, shoes, water bottle, phone, clothing on the ground, etc.) with no wildlife that explains them. Example: person/legs with a bag → **Human**, count `1` — never "No animal detected" / "no human or animal visible" / "truly empty"
+
+**Important:** A frame with a person + bag + legs is **not** empty. Always set `has_animal: true` whenever `has_human: true` (do not treat "human" as excluding animal-presence flags).
 
 Counting:
 

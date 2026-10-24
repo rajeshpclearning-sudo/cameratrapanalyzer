@@ -8,14 +8,14 @@ Return JSON only. Use common English species names in species_common (scientific
 Count only visible individuals.
 Apply the station classification rules below strictly — they override generic wildlife knowledge when they conflict.
 
-When an animal IS visible (including partial bodies at the frame edge):
-- has_animal: true
-- species_common: best common-name guess from the station rules (e.g. "Elephant" for a large grey body leaving the frame). Prefer a species name over "Unidentified" when body size/shape/colour support a clear guess.
-- individual_count: integer count of distinct animals inferred from visible parts (usually 1 for one partial body)
+When a wildlife animal OR human evidence is visible (including partial bodies, legs, bags at the frame edge):
+- has_animal: true  (ALWAYS true if has_human is true — humans count as presence, not an empty frame)
+- species_common: wildlife name from station rules, OR "Human" when people/body parts/belongings are present
+- individual_count: integer count of distinct animals or people inferred from visible parts
 - individuals_description: same count as a string (e.g. "1")
 - behavior: one of foraging, moving, standing, resting, drinking, running, unknown
 
-When NO animal and NO human evidence is visible (truly empty):
+When TRULY empty (no wildlife AND no person AND no human legs/feet/hands/fingers AND no bag/sandals/gear):
 - has_animal: false
 - has_human: false
 - species_common: "No animal detected" (or "No animal – …" with a short scene note)
@@ -24,7 +24,7 @@ When NO animal and NO human evidence is visible (truly empty):
 - behavior: brief scene/activity description (what is seen — not "N/A" or "Not Applicable")
 
 Other rules:
-- Humans (this frame only): has_human true, species_common "Human", has_animal true when any person, human body part (fingers/hand/arm/foot at camera), or clear human belongings (bag, sandals, shoes, backpack, etc.) are visible. individual_count = distinct people (use 1 for belongings-only or hand/fingers-only). Never mark empty / "no human or animal visible" in those cases. Never invent humans from neighboring burst photos.
+- Humans (this frame only): If you see a person, legs/feet, fingers/hand, bag, sandals, shoes, or backpack → has_human true, has_animal true, species_common "Human", count people (use 1 if only legs+bag or only fingers). NEVER output empty / "no human or animal visible" for those frames. Never invent humans from neighboring burst photos.
 - Do not invent rare/exotic species; for clear partial Indian wildlife (elephant, deer, etc.), do make an intelligent guess.
 - Never use "Partial animal visible at frame edge — species unconfirmed" as species_common.
 - For background/secondary animals, follow the station verification rules (eye-shine alone is not enough).`;
@@ -148,12 +148,39 @@ function normalizeNoAnimalAnalysis(parsed: LlmAnalysis): LlmAnalysis {
       : "No animal – empty scene";
   }
   parsed.individual_count = 0;
+  parsed.has_human = false;
   return parsed;
 }
 
 function normalizeAnimalAnalysis(parsed: LlmAnalysis): LlmAnalysis {
+  if (parsed.individual_count < 1) parsed.individual_count = 1;
   parsed.individuals_description = String(parsed.individual_count);
   return parsed;
+}
+
+function looksLikeHumanLabel(text: string): boolean {
+  const s = text.toLowerCase();
+  return (
+    s.includes("human") ||
+    s.includes("person") ||
+    s.includes("people") ||
+    s.includes("sandal") ||
+    s.includes("backpack") ||
+    /\bbag\b/.test(s) ||
+    s.includes("finger") ||
+    s.includes("hand at") ||
+    s.includes("legs")
+  );
+}
+
+function looksLikeEmptyDenial(text: string): boolean {
+  const s = text.toLowerCase();
+  return (
+    s.includes("no human") ||
+    s.includes("no animal") ||
+    s.includes("truly empty") ||
+    s.includes("nothing visible")
+  );
 }
 
 export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
@@ -169,13 +196,17 @@ export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
         content: [
           {
             type: "text",
-            text: "Analyze this camera-trap image using the FFS Station C8 classification rules.",
+            text:
+              "Analyze this camera-trap image using the FFS Station C8 classification rules. " +
+              "Look carefully for people, human legs/feet, fingers/hands, and belongings (bag, sandals). " +
+              "If any of those are present, this is NOT an empty frame — use Human.",
           },
           {
             type: "image_url",
             image_url: {
               url: `data:image/jpeg;base64,${base64}`,
-              detail: "low",
+              // "low" missed people/legs/bags at frame edges; use high for trap ID.
+              detail: "high",
             },
           },
         ],
@@ -192,14 +223,28 @@ export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
 
   const parsed = JSON.parse(content) as LlmAnalysis;
 
-  if (!parsed.has_animal) {
+  // Critical: models often set has_human true but has_animal false ("human ≠ animal"),
+  // and our old path then rewrote the row as empty. Humans are presence.
+  if (parsed.has_human || looksLikeHumanLabel(parsed.species_common ?? "")) {
+    parsed.has_human = true;
+    parsed.has_animal = true;
+    if (!parsed.species_common.toLowerCase().includes("human")) {
+      parsed.species_common = "Human";
+    }
+    if (parsed.individual_count < 1) parsed.individual_count = 1;
+    normalizeAnimalAnalysis(parsed);
+  } else if (!parsed.has_animal) {
     normalizeNoAnimalAnalysis(parsed);
   } else {
     normalizeAnimalAnalysis(parsed);
   }
 
-  if (parsed.has_human && !parsed.species_common.toLowerCase().includes("human")) {
+  // Guard: never keep a contradictory "empty" species when human flag is set.
+  if (parsed.has_human && looksLikeEmptyDenial(parsed.species_common)) {
     parsed.species_common = "Human";
+    parsed.has_animal = true;
+    if (parsed.individual_count < 1) parsed.individual_count = 1;
+    normalizeAnimalAnalysis(parsed);
   }
 
   return parsed;
