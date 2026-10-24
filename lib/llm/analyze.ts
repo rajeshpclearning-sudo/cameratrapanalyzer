@@ -8,22 +8,24 @@ Return JSON only. Use common English species names in species_common (scientific
 Count only visible individuals.
 Apply the station classification rules below strictly — they override generic wildlife knowledge when they conflict.
 
-When an animal IS visible:
-- species_common: common name from the station rules (or "Human", or "Unidentified" if unclear)
-- individual_count: integer count of visible animals
-- individuals_description: same count as a string (e.g. "2")
+When an animal IS visible (including partial bodies at the frame edge):
+- has_animal: true
+- species_common: best common-name guess from the station rules (e.g. "Elephant" for a large grey body leaving the frame). Prefer a species name over "Unidentified" when body size/shape/colour support a clear guess.
+- individual_count: integer count of distinct animals inferred from visible parts (usually 1 for one partial body)
+- individuals_description: same count as a string (e.g. "1")
 - behavior: one of foraging, moving, standing, resting, drinking, running, unknown
 
-When NO animal is visible:
+When NO animal is visible (truly empty — no body part at all):
 - has_animal: false
-- species_common: "No animal detected" (or "No animal – …" with a short scene note; or "Partial animal visible at frame edge — species unconfirmed" per station rules)
+- species_common: "No animal detected" (or "No animal – …" with a short scene note)
 - individual_count: 0
 - individuals_description: short text describing absence (e.g. "No animals visible")
 - behavior: brief scene/activity description (what is seen — not "N/A" or "Not Applicable")
 
 Other rules:
 - If humans are visible: has_human true, species_common "Human" (or "Human (N individuals)" if count > 1)
-- Do not guess rare species when uncertain.
+- Do not invent rare/exotic species; for clear partial Indian wildlife (elephant, deer, etc.), do make an intelligent guess.
+- Never use "Partial animal visible at frame edge — species unconfirmed" as species_common.
 - For background/secondary animals, follow the station verification rules (eye-shine alone is not enough).`;
 
 let cachedStationRules: string | null = null;

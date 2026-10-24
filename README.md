@@ -593,7 +593,8 @@ Use JSON schema / structured output (OpenAI `json_schema` or Gemini JSON mode).
 - Forest camera trap at **FFS Station C8, Wayanad**; **common English names** only.
 - Station species rules live in [`lib/llm/ffs-c8-rules.md`](lib/llm/ffs-c8-rules.md) and are injected into **every** vision call by `lib/llm/analyze.ts`.
 - Agent skill for maintaining those rules: [`.cursor/skills/ffs-c8-photo-analysis/SKILL.md`](.cursor/skills/ffs-c8-photo-analysis/SKILL.md) (on accuracy feedback: update the rules file, log the correction, commit + push).
-- Count **visible** individuals only.
+- **Partial / edge-of-frame animals** (e.g. most of an elephant leaving the shot): make an intelligent species guess and count — do not label as empty or “partial unconfirmed”.
+- Count **visible** individuals only (including animals inferred from a clear partial body).
 - Behavior enum: `foraging`, `moving`, `standing`, `resting`, `drinking`, `running`, `unknown`, `N/A`.
 - **Do not** ask the LLM for date or time — use EXIF and Drive metadata only.
 - Resize/compress images before the API call (see token savings below).

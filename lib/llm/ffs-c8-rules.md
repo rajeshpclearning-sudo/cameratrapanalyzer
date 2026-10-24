@@ -30,6 +30,17 @@ Leopard Cat (Prionailurus bengalensis): smaller, with clear rosette spots on a l
 
 Do not report a secondary animal in the background unless at least two clear anatomical features are visible (body shape, limbs, head, eye-shine with body outline). Eye-shine alone is insufficient to name a species. If a dark shape is partially visible behind a primary animal, note it as "indistinct shape in background — species unconfirmed". Apply extra caution before reporting Sloth Bear, Dhole, or large carnivores — these require clear visible features for confirmation.
 
-## 8. EMPTY FRAMES — Report as No Animal
+## 8. EMPTY FRAMES — Report as No Animal only when truly empty
 
-If no animal is visible anywhere in the frame (including arboreal zones and background), classify as "No animal detected". Do not interpret shadows, vegetation, or branches as animals. Exception: if a partial animal (leg, tail tip) is clearly visible at the frame edge, note it as "Partial animal visible at frame edge — species unconfirmed".
+If **no** animal body part is visible anywhere in the frame (including arboreal zones and background), classify as "No animal detected". Do not interpret shadows, vegetation, or branches as animals.
+
+## 9. PARTIAL / EDGE-OF-FRAME ANIMALS — Make an intelligent species guess
+
+If any animal tissue is clearly visible at the frame edge or mostly leaving/entering the frame (for example three-quarters of a body, a trunk, a large grey rump, legs, ear, or tail of a large mammal), treat this as **an animal present**, not an empty frame.
+
+- Set `has_animal` true.
+- Put your **best species guess** in `species_common` using Station C8 naming (e.g. "Elephant" when size, colour, and body shape match an Asian elephant even if the head is cut off).
+- Set `individual_count` / `individuals_description` to the number of distinct animals you can reasonably infer from the visible parts (usually `1` for one partial body leaving the frame).
+- Prefer a confident common name over "No animal detected" or "Partial animal visible at frame edge — species unconfirmed".
+- Only use "Unidentified" when the visible fragment is too small or ambiguous to support any species guess (e.g. a tiny blur with no shape). Do **not** use the old phrase "Partial animal visible at frame edge — species unconfirmed" as `species_common`.
+- Typical case: consecutive trap shots of the same elephant walking out of frame — each partial frame should still be labeled **Elephant** (count 1) when the visible bulk matches an elephant.
