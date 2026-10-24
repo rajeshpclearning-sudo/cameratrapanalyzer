@@ -103,6 +103,9 @@ export default function Home() {
   const savedHistoryRef = useRef(false);
   const completedByNameRef = useRef(completedByName);
   completedByNameRef.current = completedByName;
+  /** Client-side stop for Vercel multi-batch uploads (server cancel alone is not enough). */
+  const stopRequestedRef = useRef(false);
+  const uploadAbortRef = useRef<AbortController | null>(null);
   const filesInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
 
@@ -392,6 +395,12 @@ export default function Home() {
       stopPolling();
       const tick = async () => {
         try {
+          if (stopRequestedRef.current) {
+            stopPolling();
+            void fetch(`/api/jobs/${id}/cancel`, { method: "POST" });
+            reject(new DOMException("Stopped by user", "AbortError"));
+            return;
+          }
           const res = await fetch(`/api/jobs/${id}`);
           if (res.status === 404) {
             stopPolling();
@@ -435,6 +444,9 @@ export default function Home() {
     setSubmitting(true);
     setStopping(false);
     setChunkProgress(null);
+    stopRequestedRef.current = false;
+    uploadAbortRef.current?.abort();
+    uploadAbortRef.current = new AbortController();
     // Keep prior poll visible until the new result arrives (Vercel sync can take a while).
     setJobId(null);
     setSyncCsvContent(null);
@@ -443,6 +455,7 @@ export default function Home() {
     try {
       prepared = [];
       for (const { file } of selected) {
+        if (stopRequestedRef.current) break;
         // Re-read bytes before upload (iOS/Drive pickers can hand empty or stale File handles).
         const buffer = await file.arrayBuffer();
         if (buffer.byteLength === 0) {
@@ -450,6 +463,7 @@ export default function Home() {
             `"${file.name}" has no data yet. Open it once in Google Drive/Files, then Choose photos again.`,
           );
           setSubmitting(false);
+          setStopping(false);
           return;
         }
         const type =
@@ -470,6 +484,20 @@ export default function Home() {
           : "Could not read photo from the phone. Try Choose photos again.",
       );
       setSubmitting(false);
+      setStopping(false);
+      return;
+    }
+
+    if (stopRequestedRef.current) {
+      setSubmitting(false);
+      setStopping(false);
+      setChunkProgress(null);
+      setError(null);
+      setPoll((prev) =>
+        prev
+          ? { ...prev, status: "cancelled" }
+          : null,
+      );
       return;
     }
 
@@ -488,6 +516,7 @@ export default function Home() {
     let lastCsvContent: string | undefined;
     let lastSupabase: JobPollResponse["supabase"];
     let anyFailed = false;
+    let userStopped = false;
 
     const applyFileResults = (files: FileJobState[]) => {
       setCompletedByName((prev) => {
@@ -522,6 +551,11 @@ export default function Home() {
 
     try {
       for (let i = 0; i < chunks.length; i++) {
+        if (stopRequestedRef.current) {
+          userStopped = true;
+          break;
+        }
+
         const chunk = chunks[i]!;
         setChunkProgress({ current: i + 1, total: chunks.length });
 
@@ -543,7 +577,11 @@ export default function Home() {
 
         let result: JobPollResponse | null = null;
         try {
-          const res = await fetch("/api/jobs", { method: "POST", body: form });
+          const res = await fetch("/api/jobs", {
+            method: "POST",
+            body: form,
+            signal: uploadAbortRef.current?.signal,
+          });
           const parsed = await readApiJson<
             Partial<JobPollResponse> & { jobId?: string; error?: string }
           >(res);
@@ -557,6 +595,12 @@ export default function Home() {
 
           lastJobId = data.jobId;
           setJobId(data.jobId);
+
+          if (stopRequestedRef.current) {
+            userStopped = true;
+            void fetch(`/api/jobs/${data.jobId}/cancel`, { method: "POST" });
+            break;
+          }
 
           const syncDone =
             data.status === "completed" ||
@@ -581,6 +625,14 @@ export default function Home() {
             result = await waitForJobComplete(data.jobId);
           }
         } catch (chunkErr) {
+          const aborted =
+            (chunkErr instanceof DOMException && chunkErr.name === "AbortError") ||
+            (chunkErr instanceof Error && chunkErr.name === "AbortError") ||
+            stopRequestedRef.current;
+          if (aborted) {
+            userStopped = true;
+            break;
+          }
           // Do not abort the whole folder — continue with remaining photos.
           const message =
             chunkErr instanceof Error ? chunkErr.message : String(chunkErr);
@@ -607,6 +659,7 @@ export default function Home() {
 
         if (result) {
           if (result.status === "failed") anyFailed = true;
+          if (result.status === "cancelled") userStopped = true;
           mergedFiles.push(...result.files);
           mergedErrors.push(...(result.errors ?? []));
           mergedStats = mergeStats(mergedStats, result.stats);
@@ -622,6 +675,11 @@ export default function Home() {
             setSessionCsv(csvForNext);
           }
           applyFileResults(result.files);
+        }
+
+        if (userStopped || stopRequestedRef.current) {
+          userStopped = true;
+          break;
         }
 
         const completedCount = mergedFiles.filter(
@@ -660,8 +718,37 @@ export default function Home() {
       ).length;
       const failedN = mergedFiles.filter((f) => f.status === "error").length;
       const already = mergedStats?.alreadyAnalyzed ?? 0;
+      const remaining = selected.length - doneOk - failedN;
 
-      if (failedN > 0) {
+      const completedCount = mergedFiles.filter(
+        (f) =>
+          f.status === "done" ||
+          f.status === "skipped" ||
+          f.status === "already_done" ||
+          f.status === "error",
+      ).length;
+
+      if (userStopped || stopRequestedRef.current) {
+        setPoll({
+          jobId: lastJobId || "stopped",
+          status: "cancelled",
+          total: selected.length,
+          completed: completedCount,
+          files: mergedFiles,
+          errors: mergedErrors,
+          csvReady: !!lastCsvContent,
+          downloadFilename: lastDownloadName,
+          stats: mergedStats,
+          supabase: lastSupabase,
+          csvContent: lastCsvContent,
+        });
+        setError(
+          `Stopped. Analyzed ${doneOk} of ${selected.length} photos` +
+            (remaining > 0
+              ? ` — ${remaining} not run. Tap Analyze to continue with the rest.`
+              : ".") ,
+        );
+      } else if (failedN > 0) {
         setError(
           `Finished ${doneOk} of ${selected.length} photos` +
             (already > 0 ? ` (${already} already in log/Supabase)` : "") +
@@ -677,29 +764,42 @@ export default function Home() {
       setSubmitting(false);
       setStopping(false);
       setChunkProgress(null);
+      stopRequestedRef.current = false;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Request failed");
+      if (
+        stopRequestedRef.current ||
+        (err instanceof DOMException && err.name === "AbortError")
+      ) {
+        setPoll((prev) =>
+          prev ? { ...prev, status: "cancelled" } : prev,
+        );
+        setError("Stopped. Tap Analyze to continue with remaining photos.");
+      } else {
+        setError(err instanceof Error ? err.message : "Request failed");
+      }
       setSubmitting(false);
       setStopping(false);
       setChunkProgress(null);
+      stopRequestedRef.current = false;
     }
   };
 
   const stopAnalysis = async () => {
-    if (!jobId || stopping) return;
+    if (stopping) return;
+    const runningNow =
+      submitting || poll?.status === "running" || poll?.status === "queued";
+    if (!runningNow) return;
     setStopping(true);
-    try {
-      const res = await fetch(`/api/jobs/${jobId}/cancel`, { method: "POST" });
-      if (!res.ok) {
-        const parsed = await readApiJson<{ error?: string }>(res);
-        setError(
-          "error" in parsed ? parsed.error : "Failed to stop analysis",
-        );
-        setStopping(false);
+    stopRequestedRef.current = true;
+    uploadAbortRef.current?.abort();
+    stopPolling();
+    const id = jobId;
+    if (id) {
+      try {
+        await fetch(`/api/jobs/${id}/cancel`, { method: "POST" });
+      } catch {
+        // Client stop still applies even if cancel request fails (Vercel sync).
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to stop analysis");
-      setStopping(false);
     }
   };
 
@@ -760,7 +860,10 @@ export default function Home() {
     !!poll &&
     (submitting || poll.status === "running" || poll.status === "queued");
   const analysisRunning =
-    !!poll && poll.status === "running" && !stopping;
+    !!poll &&
+    (poll.status === "running" || poll.status === "queued") &&
+    !stopping;
+  const showStopButton = submitting || analysisRunning || stopping;
   const hasUnanalyzedFiles = localFiles.some(
     (f) => !isFileAnalyzed(completedByName[f.file.name]),
   );
@@ -980,7 +1083,7 @@ export default function Home() {
                 </span>
               )}
             </div>
-            {view === "analysis" && (analysisRunning || stopping) && (
+            {view === "analysis" && showStopButton && (
               <button
                 type="button"
                 disabled={stopping}
@@ -1418,28 +1521,21 @@ export default function Home() {
           style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
         >
           <div className="mx-auto flex max-w-content gap-sm">
-            {submitting ? (
-              <button
-                type="button"
-                disabled
-                className="pointer-events-none flex min-h-12 flex-1 items-center justify-center gap-xs rounded-xl bg-primary font-bold text-background opacity-90"
-              >
-                <Icon name="sync" className="animate-spin" />
-                <span>
-                  {chunkProgress && chunkProgress.total > 1
-                    ? `Batch ${chunkProgress.current}/${chunkProgress.total}…`
-                    : "Analyzing…"}
-                </span>
-              </button>
-            ) : analysisRunning || stopping ? (
+            {showStopButton ? (
               <button
                 type="button"
                 disabled={stopping}
                 onClick={() => void stopAnalysis()}
                 className="flex min-h-12 flex-1 items-center justify-center gap-xs rounded-xl border border-error/40 bg-error-container/10 font-mono text-label-md font-bold uppercase text-error disabled:opacity-50"
               >
-                <Icon name="stop_circle" />
-                <span>{stopping ? "Stopping…" : "Stop"}</span>
+                <Icon name={stopping ? "sync" : "stop_circle"} className={stopping ? "animate-spin" : ""} />
+                <span>
+                  {stopping
+                    ? "Stopping…"
+                    : chunkProgress && chunkProgress.total > 1
+                      ? `Stop (batch ${chunkProgress.current}/${chunkProgress.total})`
+                      : "Stop"}
+                </span>
               </button>
             ) : (
               <button

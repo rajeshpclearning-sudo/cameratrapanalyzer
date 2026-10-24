@@ -89,7 +89,7 @@ flowchart TD
 | **Global error** | Validation / API errors | Banner (red border); e.g. max 50 files, missing API key, HEIC rejected |
 | **Section 1 — Select images** | Ingest | Section card; labels “Folder” and “Or individual files”; native file inputs; hint text (formats, max 50); toolbar: Select all, Deselect all, Remove selected; scrollable **file list** (checkbox + filename); counter “N of M selected” |
 | **Section 2 — Optional log** | Append mode | Section card; CSV file input; hint “Will append to: {filename}” when chosen |
-| **Section 3 — Run analysis** | Action + feedback | Primary button “Run analysis” (disabled when 0 selected or running); label changes to “Running…”; secondary **Download {filename}** when ready; **progress bar** + “completed / total”; **status list** per file |
+| **Section 3 — Run analysis** | Action + feedback | Primary **Analyze** when idle; while running, **Stop** (header + sticky bar) cancels further batches; secondary **Download {filename}** when ready; **progress bar** + “completed / total”; **status list** per file |
 
 **Per-file status labels (use color in design):**
 
@@ -104,9 +104,9 @@ flowchart TD
 
 | Button | State | Action |
 |--------|-------|--------|
-| Run analysis | Enabled when ≥1 file selected and idle | Starts batch |
-| Run analysis | Disabled | No selection or job running |
-| Download …csv | Visible when job completed | Downloads result file |
+| Analyze | Enabled when ≥1 file selected and idle | Starts batch (may split into many small uploads on Vercel) |
+| Stop | Visible while uploading/analyzing | Stops further batches; in-flight photo may finish; tap Analyze again for remaining |
+| Download …csv | Visible when job completed or stopped with results | Downloads result file |
 
 **Empty states**
 
@@ -200,7 +200,7 @@ Vercel runs **serverless** functions. This app finishes analysis **inside** `POS
    | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | Optional cloud save |
 
 3. **Redeploy** after adding or editing variables (Deployments → … → Redeploy).
-4. Limits: Hobby ~**60s** / Pro up to **300s** per request (`maxDuration`). Vercel also caps each **request body at ~4.5 MB**. Large folder uploads are **split into small batches** (1 photo per request on `*.vercel.app`), images are **shrunk in the browser** after reading EXIF, and a failed batch **does not stop** the rest of the folder. Watch for **Batch N/M…**. If some photos error, tap **Analyze** again to retry only the remaining ones.
+4. Limits: Hobby ~**60s** / Pro up to **300s** per request (`maxDuration`). Vercel also caps each **request body at ~4.5 MB**. Large folder uploads are **split into small batches** (1 photo per request on `*.vercel.app`), images are **shrunk in the browser** after reading EXIF, and a failed batch **does not stop** the rest of the folder. Watch for **Batch N/M…**. **Stop** cancels further batches immediately (the photo already in flight on the server may finish). Tap **Analyze** again to continue with remaining photos.
 5. For long multi-minute batches with live progress bars, prefer **Railway** (long-lived Node server + polling).
 
 If analysis shows **Invalid URL**: `OPENAI_BASE_URL` is wrong (quotes, missing `https://`, or a pasted key). Edit it to exactly `https://openrouter.ai/api/v1` with no quotes, then Redeploy. Do not **Add** a name that already exists — **Edit** it.
@@ -331,7 +331,7 @@ npm run dev:clean
 
 1. **Select images** — on desktop: **Upload Folder** uses Chrome’s directory picker (starts in **Downloads**) so you are not stuck in the last trap folder and you avoid Chrome’s repeated “Upload N files… trust this site?” warning (that warning only happens with old folder-input uploads and cannot be turned off). Or use individual files. On phone: **Choose photos** from Google Drive / Files (JPEG, PNG, WebP, HEIC; max 50 per batch). Tap a row/card to preview.
 2. **Optional existing log** — upload a `Camera_Trap_Analysis*.csv` to **append** new rows (header must match spec below).
-3. **Run analysis** — progress per file; **date/time come from the photo’s EXIF** (`DateTimeOriginal` when the trap took the shot), read from the **original** file bytes before any resize. If the image has no EXIF (some phone/Drive exports strip it), the app falls back to the file’s last-modified time (often “today”). Before calling the AI, the server checks your **session CSV** and **Supabase** for the same **Photo Name**. Matches are marked **Already done** (no new AI call, no second database row). After a batch finishes, **upload more photos** in the same session — new uploads are auto-selected, already-analyzed photos are skipped, and **Analyze N new photo(s)** only processes waiting rows; results append to the session CSV (and Supabase when configured). Use **Clear results & re-analyze all** to wipe session memory; photos still in Supabase remain skipped unless you delete those rows in Table Editor first.
+3. **Run analysis** — progress per file; **date/time come from the photo’s EXIF** (`DateTimeOriginal` when the trap took the shot), read from the **original** file bytes before any resize. If the image has no EXIF (some phone/Drive exports strip it), the app falls back to the file’s last-modified time (often “today”). Before calling the AI, the server checks your **session CSV** and **Supabase** for the same **Photo Name**. Matches are marked **Already done** (no new AI call, no second database row). Tap **Stop** anytime to halt remaining photos (the one already uploading may finish). After a stop or a full run, **upload more photos** in the same session — new uploads are auto-selected, already-analyzed photos are skipped, and **Analyze N new photo(s)** only processes waiting rows; results append to the session CSV (and Supabase when configured). Use **Clear results & re-analyze all** to wipe session memory; photos still in Supabase remain skipped unless you delete those rows in Table Editor first.
 4. **Download CSV** — new file `CTA_YYYY-MM-DD_HHmmss.csv` (unique date + time), or same name as the uploaded log when appending. Rows are sorted by **Photo Name** in natural order (e.g. `I__00071` … `I__00120`).
 5. **Optional Supabase** — when configured, each **newly analyzed** row in a finished job is inserted into `camera_trap_sightings` (rows from an uploaded existing CSV or earlier session rows are not re-inserted).
 6. **Import Log** (sidebar) — upload a past analysis file in **Excel** (`.xlsx`, `.xls`) or **CSV** with the same column header as below. Preview rows, then **Import to Supabase**. If this browser imported a file with the **same filename** before, a warning appears and you must click **Import anyway** (tracking is per-browser in localStorage, not across devices). Re-importing still adds duplicate rows to Supabase.

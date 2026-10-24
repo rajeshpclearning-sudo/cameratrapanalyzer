@@ -162,6 +162,10 @@ async function processLeader(
   file: BatchFile,
 ): Promise<CsvRow> {
   const { buffer, name, mime, lastModified } = file;
+  if (isJobCancelRequested(jobId)) {
+    markFile(jobId, index, { name, status: "skipped" });
+    throw new Error("cancelled");
+  }
   const files = [...(getJob(jobId)?.files ?? [])];
   files[index] = { ...files[index], status: "analyzing" };
   updateJob(jobId, { files });
@@ -179,11 +183,21 @@ async function processLeader(
     );
     const jpeg = await decodeToJpeg(buffer);
 
+    if (isJobCancelRequested(jobId)) {
+      markFile(jobId, index, { name, status: "skipped" });
+      throw new Error("cancelled");
+    }
+
     if (SKIP_EMPTY && (await isLikelyEmptyFrame(jpeg))) {
       const row = emptyFrameRow(name, date, timestamp);
       markFile(jobId, index, { name, status: "skipped", row });
       incrementStats(jobId, "emptySkipped");
       return row;
+    }
+
+    if (isJobCancelRequested(jobId)) {
+      markFile(jobId, index, { name, status: "skipped" });
+      throw new Error("cancelled");
     }
 
     const analysis = await analyzeImage(jpeg);
@@ -193,6 +207,9 @@ async function processLeader(
     return row;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    if (message === "cancelled" || isJobCancelRequested(jobId)) {
+      throw err;
+    }
     const job = getJob(jobId);
     markFile(jobId, index, { name, status: "error", error: message });
     if (job) {
@@ -257,9 +274,17 @@ async function processGroup(
   group: number[],
   files: BatchFile[],
 ): Promise<(CsvRow | null)[]> {
+  if (isJobCancelRequested(jobId)) {
+    return group.map(() => null);
+  }
+
   if (!DEDUPE_BURST || group.length === 1) {
     const rows: (CsvRow | null)[] = [];
     for (const idx of group) {
+      if (isJobCancelRequested(jobId)) {
+        rows.push(null);
+        continue;
+      }
       rows.push(await processSingle(jobId, idx, files[idx]!));
     }
     return applyBurstReconciliation(jobId, group, rows);
@@ -278,6 +303,10 @@ async function processGroup(
 
   if (!leaderRow) {
     for (let i = 1; i < group.length; i++) {
+      if (isJobCancelRequested(jobId)) {
+        rows[i] = null;
+        continue;
+      }
       const idx = group[i]!;
       rows[i] = await processSingle(jobId, idx, files[idx]!);
     }
@@ -289,6 +318,10 @@ async function processGroup(
   const analyzeEach = mustAnalyzeBurstFollowersIndependently(leaderRow[3]);
 
   for (let i = 1; i < group.length; i++) {
+    if (isJobCancelRequested(jobId)) {
+      rows[i] = null;
+      continue;
+    }
     const idx = group[i]!;
     try {
       if (analyzeEach) {
@@ -308,15 +341,17 @@ async function runPool<T, R>(
   items: T[],
   concurrency: number,
   fn: (item: T) => Promise<R>,
+  shouldStop?: () => boolean,
 ): Promise<R[]> {
   const results: R[] = new Array(items.length);
   let nextIndex = 0;
 
   async function worker(): Promise<void> {
     while (true) {
+      if (shouldStop?.()) break;
       const i = nextIndex++;
       if (i >= items.length) break;
-      results[i] = await fn(items[i]);
+      results[i] = await fn(items[i]!);
     }
   }
 
@@ -445,14 +480,19 @@ export async function runBatch(input: BatchInput): Promise<void> {
     const groups = groupBurstIndices(meta);
     const concurrency = getConcurrency();
 
-    const groupResults = await runPool(groups, concurrency, (group) => {
-      if (isJobCancelRequested(jobId)) {
-        return Promise.resolve(group.map(() => null));
-      }
-      // Remap group indices (relative to analyzeFiles) back to original file indices
-      const originalGroup = group.map((gi) => analyzeIndices[gi]!);
-      return processGroup(jobId, originalGroup, files);
-    });
+    const groupResults = await runPool(
+      groups,
+      concurrency,
+      (group) => {
+        if (isJobCancelRequested(jobId)) {
+          return Promise.resolve(group.map(() => null));
+        }
+        // Remap group indices (relative to analyzeFiles) back to original file indices
+        const originalGroup = group.map((gi) => analyzeIndices[gi]!);
+        return processGroup(jobId, originalGroup, files);
+      },
+      () => isJobCancelRequested(jobId),
+    );
 
     if (isJobCancelRequested(jobId)) {
       await finalizeCancelled(jobId, existingRows, downloadFilename);
