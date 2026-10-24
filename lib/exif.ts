@@ -20,7 +20,7 @@ const MONTHS = [
   "Dec",
 ] as const;
 
-function formatFromDate(d: Date): DateTimeFields {
+export function formatFromDate(d: Date): DateTimeFields {
   const dd = String(d.getDate());
   const mmm = MONTHS[d.getMonth()] ?? "Jan";
   const yyyy = d.getFullYear();
@@ -86,5 +86,39 @@ export async function extractDateTime(
     // fall through to fallback
   }
 
+  return formatFromDate(fallbackDate);
+}
+
+/**
+ * Browser-safe EXIF read from a File/Blob (before client-side JPEG shrink strips tags).
+ */
+export async function extractDateTimeFromFile(
+  file: Blob,
+  fallbackDate: Date,
+): Promise<DateTimeFields> {
+  try {
+    const exif = await exifr.parse(file, {
+      pick: [
+        "DateTimeOriginal",
+        "DateTimeDigitized",
+        "CreateDate",
+        "DateTime",
+        "ModifyDate",
+      ],
+    });
+    const candidates = [
+      exif?.DateTimeOriginal,
+      exif?.DateTimeDigitized,
+      exif?.CreateDate,
+      exif?.DateTime,
+      exif?.ModifyDate,
+    ];
+    for (const raw of candidates) {
+      const when = coerceExifDate(raw);
+      if (when) return formatFromDate(when);
+    }
+  } catch {
+    // fall through
+  }
   return formatFromDate(fallbackDate);
 }

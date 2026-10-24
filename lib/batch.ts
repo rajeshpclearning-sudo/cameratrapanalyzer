@@ -33,6 +33,8 @@ export type BatchFile = {
   name: string;
   mime: string;
   lastModified: number;
+  /** From client EXIF read before upload shrink (preserves trap taken-at). */
+  dateOverride?: { date: string; timestamp: string };
 };
 
 function llmToRow(
@@ -143,7 +145,14 @@ function incrementStats(
 async function getDateTime(
   buffer: Buffer,
   lastModified: number,
+  dateOverride?: { date: string; timestamp: string },
 ): Promise<{ date: string; timestamp: string }> {
+  if (dateOverride?.date?.trim() && dateOverride?.timestamp?.trim()) {
+    return {
+      date: dateOverride.date.trim(),
+      timestamp: dateOverride.timestamp.trim(),
+    };
+  }
   return extractDateTime(buffer, new Date(lastModified));
 }
 
@@ -162,9 +171,12 @@ async function processLeader(
       throw new Error(`Unsupported file type: ${mime || "unknown"}`);
     }
 
-    // Read date/time from the *original* bytes — decodeToJpeg re-encodes and
-    // strips EXIF, which made us fall back to file lastModified (often "today").
-    const { date, timestamp } = await getDateTime(buffer, lastModified);
+    // Prefer client EXIF override (upload may be shrunk); else original buffer EXIF.
+    const { date, timestamp } = await getDateTime(
+      buffer,
+      lastModified,
+      file.dateOverride,
+    );
     const jpeg = await decodeToJpeg(buffer);
 
     if (SKIP_EMPTY && (await isLikelyEmptyFrame(jpeg))) {
@@ -204,6 +216,7 @@ async function processFollower(
     const { date, timestamp } = await getDateTime(
       file.buffer,
       file.lastModified,
+      file.dateOverride,
     );
     const jpeg = await decodeToJpeg(file.buffer);
     const row = copyAnalysisRow(file.name, date, timestamp, leaderRow);
@@ -401,6 +414,8 @@ export async function runBatch(input: BatchInput): Promise<void> {
     );
 
     const analyzeIndices: number[] = [];
+    /** Prior rows from Supabase/session that are not already in existingRows — include in CSV. */
+    const reusedRows: CsvRow[] = [];
     for (let i = 0; i < files.length; i++) {
       const name = files[i]!.name;
       const prior = alreadyKnown.get(name.trim()) ?? alreadyKnown.get(name);
@@ -411,6 +426,10 @@ export async function runBatch(input: BatchInput): Promise<void> {
           row: prior,
         });
         incrementStats(jobId, "alreadyAnalyzed");
+        if (!fromCsv.has(name.trim())) {
+          reusedRows.push(prior);
+          fromCsv.add(name.trim());
+        }
         continue;
       }
       analyzeIndices.push(i);
@@ -448,8 +467,8 @@ export async function runBatch(input: BatchInput): Promise<void> {
       }
     }
 
-    // CSV: keep prior log rows, then only newly analyzed rows (not already_done).
-    const allRows = [...existingRows, ...newRows];
+    // CSV: prior log + reused Supabase rows + newly analyzed rows.
+    const allRows = [...existingRows, ...reusedRows, ...newRows];
     const csvContent = buildCsv(allRows);
 
     // Never re-insert photo names already in the session CSV or Supabase.

@@ -200,7 +200,7 @@ Vercel runs **serverless** functions. This app finishes analysis **inside** `POS
    | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | Optional cloud save |
 
 3. **Redeploy** after adding or editing variables (Deployments → … → Redeploy).
-4. Limits: Hobby ~**60s** / Pro up to **300s** per request (`maxDuration`). Vercel also caps each **request body at ~4.5 MB** (`413 FUNCTION_PAYLOAD_TOO_LARGE`). The app **automatically splits** large folder uploads into smaller batches (and shrinks a single oversized JPEG in the browser only when needed). You can still select dozens of photos — watch for **Batch N/M…** while it runs.
+4. Limits: Hobby ~**60s** / Pro up to **300s** per request (`maxDuration`). Vercel also caps each **request body at ~4.5 MB**. Large folder uploads are **split into small batches** (1 photo per request on `*.vercel.app`), images are **shrunk in the browser** after reading EXIF, and a failed batch **does not stop** the rest of the folder. Watch for **Batch N/M…**. If some photos error, tap **Analyze** again to retry only the remaining ones.
 5. For long multi-minute batches with live progress bars, prefer **Railway** (long-lived Node server + polling).
 
 If analysis shows **Invalid URL**: `OPENAI_BASE_URL` is wrong (quotes, missing `https://`, or a pasted key). Edit it to exactly `https://openrouter.ai/api/v1` with no quotes, then Redeploy. Do not **Add** a name that already exists — **Edit** it.

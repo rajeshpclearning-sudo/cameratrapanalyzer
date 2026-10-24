@@ -79,11 +79,34 @@ async function handlePost(request: Request) {
     );
   }
 
+  /** Optional map of photo_name → { date, timestamp } from client EXIF (before shrink). */
+  let dateOverrides: Record<string, { date: string; timestamp: string }> = {};
+  const exifRaw = formData.get("exifOverrides");
+  if (typeof exifRaw === "string" && exifRaw.trim()) {
+    try {
+      const parsed = JSON.parse(exifRaw) as Record<
+        string,
+        { date?: string; timestamp?: string }
+      >;
+      for (const [name, v] of Object.entries(parsed ?? {})) {
+        if (v?.date?.trim() && v?.timestamp?.trim()) {
+          dateOverrides[name] = {
+            date: v.date.trim(),
+            timestamp: v.timestamp.trim(),
+          };
+        }
+      }
+    } catch {
+      dateOverrides = {};
+    }
+  }
+
   const files: {
     buffer: Buffer;
     name: string;
     mime: string;
     lastModified: number;
+    dateOverride?: { date: string; timestamp: string };
   }[] = [];
 
   for (const entry of fileEntries) {
@@ -120,6 +143,7 @@ async function handlePost(request: Request) {
         entry instanceof File && entry.lastModified
           ? entry.lastModified
           : Date.now(),
+      dateOverride: dateOverrides[name],
     });
   }
 

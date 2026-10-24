@@ -15,8 +15,9 @@ import { CSV_COL } from "@/lib/types";
 import type { CsvRow, FileJobState, JobPollResponse, JobStats } from "@/lib/types";
 import { buildSpeciesTally } from "@/lib/species-tally";
 import {
+  buildExifOverridesPayload,
   packUploadChunks,
-  shrinkImageForUpload,
+  prepareUploadFile,
   type PreparedUpload,
 } from "@/lib/upload-chunks";
 
@@ -442,8 +443,8 @@ export default function Home() {
           type,
           lastModified: file.lastModified,
         });
-        // Shrink only when a single file would blow Vercel's ~4.5 MB body limit.
-        prepared.push(await shrinkImageForUpload(fresh));
+        // EXIF first, then shrink for Vercel size/time limits.
+        prepared.push(await prepareUploadFile(fresh));
       }
     } catch (err) {
       setError(
@@ -511,6 +512,10 @@ export default function Home() {
         for (const item of chunk) {
           form.append("files", item.file);
         }
+        form.append(
+          "exifOverrides",
+          JSON.stringify(buildExifOverridesPayload(chunk)),
+        );
 
         if (i === 0 && existingCsvFile) {
           form.append("existingCsv", existingCsvFile);
@@ -519,95 +524,108 @@ export default function Home() {
           form.append("existingCsv", blob, csvForNext.filename);
         }
 
-        const res = await fetch("/api/jobs", { method: "POST", body: form });
-        const parsed = await readApiJson<
-          Partial<JobPollResponse> & { jobId?: string; error?: string }
-        >(res);
-        if ("error" in parsed) {
-          setError(
-            chunks.length > 1
-              ? `Batch ${i + 1} of ${chunks.length}: ${parsed.error}`
-              : parsed.error,
+        let result: JobPollResponse | null = null;
+        try {
+          const res = await fetch("/api/jobs", { method: "POST", body: form });
+          const parsed = await readApiJson<
+            Partial<JobPollResponse> & { jobId?: string; error?: string }
+          >(res);
+          if ("error" in parsed) {
+            throw new Error(parsed.error);
+          }
+          const { data } = parsed;
+          if (!res.ok || !data.jobId) {
+            throw new Error(data.error ?? "Failed to start job");
+          }
+
+          lastJobId = data.jobId;
+          setJobId(data.jobId);
+
+          const syncDone =
+            data.status === "completed" ||
+            data.status === "failed" ||
+            data.status === "cancelled";
+
+          if (syncDone && data.status && data.files && data.total != null) {
+            result = {
+              jobId: data.jobId,
+              status: data.status,
+              total: data.total,
+              completed: data.completed ?? data.total,
+              files: data.files,
+              errors: data.errors ?? [],
+              csvReady: data.csvReady ?? !!data.csvContent,
+              downloadFilename:
+                data.downloadFilename ?? "Camera_Trap_Analysis.csv",
+              stats: data.stats,
+              supabase: data.supabase,
+              csvContent: data.csvContent,
+            };
+          } else {
+            result = await waitForJobComplete(data.jobId);
+          }
+        } catch (chunkErr) {
+          // Do not abort the whole folder — continue with remaining photos.
+          const message =
+            chunkErr instanceof Error ? chunkErr.message : String(chunkErr);
+          anyFailed = true;
+          mergedErrors.push(
+            `Batch ${i + 1}/${chunks.length}: ${message}`,
           );
-          setSubmitting(false);
-          setChunkProgress(null);
-          return;
-        }
-        const { data } = parsed;
-        if (!res.ok || !data.jobId) {
-          setError(data.error ?? "Failed to start job");
-          setSubmitting(false);
-          setChunkProgress(null);
-          return;
-        }
-
-        lastJobId = data.jobId;
-        setJobId(data.jobId);
-
-        let result: JobPollResponse;
-
-        const syncDone =
-          data.status === "completed" ||
-          data.status === "failed" ||
-          data.status === "cancelled";
-
-        if (syncDone && data.status && data.files && data.total != null) {
-          result = {
-            jobId: data.jobId,
-            status: data.status,
-            total: data.total,
-            completed: data.completed ?? data.total,
-            files: data.files,
-            errors: data.errors ?? [],
-            csvReady: data.csvReady ?? !!data.csvContent,
-            downloadFilename:
-              data.downloadFilename ?? "Camera_Trap_Analysis.csv",
-            stats: data.stats,
-            supabase: data.supabase,
-            csvContent: data.csvContent,
-          };
-        } else {
-          // Local / Railway: wait for this chunk before starting the next.
-          result = await waitForJobComplete(data.jobId);
+          for (const item of chunk) {
+            const errFile: FileJobState = {
+              name: item.originalName,
+              status: "error",
+              error: message,
+            };
+            mergedFiles.push(errFile);
+          }
+          applyFileResults(
+            chunk.map((item) => ({
+              name: item.originalName,
+              status: "error" as const,
+              error: message,
+            })),
+          );
         }
 
-        if (result.status === "failed") anyFailed = true;
-        mergedFiles.push(...result.files);
-        mergedErrors.push(...(result.errors ?? []));
-        mergedStats = mergeStats(mergedStats, result.stats);
-        lastDownloadName = result.downloadFilename;
-        lastSupabase = result.supabase;
-        if (result.csvContent) {
-          lastCsvContent = result.csvContent;
-          csvForNext = {
-            content: result.csvContent,
-            filename: result.downloadFilename,
-          };
-          setSyncCsvContent(result.csvContent);
-          setSessionCsv(csvForNext);
+        if (result) {
+          if (result.status === "failed") anyFailed = true;
+          mergedFiles.push(...result.files);
+          mergedErrors.push(...(result.errors ?? []));
+          mergedStats = mergeStats(mergedStats, result.stats);
+          lastDownloadName = result.downloadFilename;
+          lastSupabase = result.supabase;
+          if (result.csvContent) {
+            lastCsvContent = result.csvContent;
+            csvForNext = {
+              content: result.csvContent,
+              filename: result.downloadFilename,
+            };
+            setSyncCsvContent(result.csvContent);
+            setSessionCsv(csvForNext);
+          }
+          applyFileResults(result.files);
         }
 
-        applyFileResults(result.files);
+        const completedCount = mergedFiles.filter(
+          (f) =>
+            f.status === "done" ||
+            f.status === "skipped" ||
+            f.status === "already_done" ||
+            f.status === "error",
+        ).length;
 
-        // Live combined progress for multi-chunk runs.
         setPoll({
-          jobId: lastJobId,
+          jobId: lastJobId || `chunk-${i}`,
           status:
             i < chunks.length - 1
               ? "running"
-              : result.status === "cancelled"
-                ? "cancelled"
-                : anyFailed
-                  ? "failed"
-                  : "completed",
+              : anyFailed
+                ? "failed"
+                : "completed",
           total: selected.length,
-          completed: mergedFiles.filter(
-            (f) =>
-              f.status === "done" ||
-              f.status === "skipped" ||
-              f.status === "already_done" ||
-              f.status === "error",
-          ).length,
+          completed: completedCount,
           files: mergedFiles,
           errors: mergedErrors,
           csvReady: !!lastCsvContent,
@@ -618,12 +636,22 @@ export default function Home() {
         });
       }
 
+      const doneOk = mergedFiles.filter(
+        (f) =>
+          f.status === "done" ||
+          f.status === "skipped" ||
+          f.status === "already_done",
+      ).length;
+      const failedN = mergedFiles.filter((f) => f.status === "error").length;
       const already = mergedStats?.alreadyAnalyzed ?? 0;
-      const llm = mergedStats?.llmCalls ?? 0;
-      if (anyFailed && mergedErrors.length > 0) {
-        setError(mergedErrors.join("; "));
-      } else if (already > 0 && llm === 0) {
-        setError(null);
+
+      if (failedN > 0) {
+        setError(
+          `Finished ${doneOk} of ${selected.length} photos` +
+            (already > 0 ? ` (${already} already in log/Supabase)` : "") +
+            `. ${failedN} failed — tap Analyze again for remaining errors. ` +
+            mergedErrors.slice(0, 3).join(" · "),
+        );
       } else if (mergedErrors.length > 0) {
         setError(mergedErrors.join("; "));
       } else {
