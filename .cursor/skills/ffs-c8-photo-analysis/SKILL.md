@@ -59,6 +59,7 @@ Full text lives in `lib/llm/ffs-c8-rules.md`. Apply strictly:
 7. **Background animals** — need ≥2 anatomical features; eye-shine alone is not enough.
 8. **Empty frames** — "No animal detected" only when truly empty.
 9. **Partial / edge-of-frame** — intelligent species guess + count (not "No animal" / not unconfirmed partial phrase).
+10. **Humans** — per-frame only; correct count; never invent or miss people across burst neighbors.
 
 ## Corrections log
 
@@ -66,4 +67,5 @@ Append newest entries at the top.
 
 | Date | Issue | Rule change |
 |------|--------|-------------|
+| 2026-10-24 | I__00126–128 labeled Human though empty of people; I__00130 had 3 humans; I__00131 had 3 humans but "no animals"; I__00133–134 wrongly got 3 humans | Rule 10 (humans per frame); burst copy no longer propagates Human or empty-frame labels to followers; Human excluded as burst reconcile anchor |
 | 2026-10-24 | I__00038 / I__00039 / I__00061 (and similar): ~¾ elephant leaving frame labeled "No animal detected"; I__00041 used "Partial animal visible at frame edge…" instead of a species | Rule 8 tightened; new Rule 9 — partial/edge animals get best species guess + individual count; prompt no longer allows the unconfirmed-partial species string |

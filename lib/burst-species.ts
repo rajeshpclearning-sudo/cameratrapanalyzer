@@ -4,6 +4,10 @@ export function isUnidentifiedSpecies(species: string): boolean {
   return species.trim().toLowerCase() === "unidentified";
 }
 
+export function isHumanSpecies(species: string): boolean {
+  return species.trim().toLowerCase().includes("human");
+}
+
 export function isEmptySpecies(species: string): boolean {
   const s = species.toLowerCase();
   return (
@@ -12,6 +16,18 @@ export function isEmptySpecies(species: string): boolean {
     s.includes("empty trail") ||
     s.includes("vegetation only") ||
     s.includes("low image variation")
+  );
+}
+
+/**
+ * Burst leader labels that must NOT be copied to other frames.
+ * Humans walk in/out between shots; empty frames must not blank neighbors.
+ */
+export function mustAnalyzeBurstFollowersIndependently(species: string): boolean {
+  return (
+    isUnidentifiedSpecies(species) ||
+    isEmptySpecies(species) ||
+    isHumanSpecies(species)
   );
 }
 
@@ -29,7 +45,12 @@ function isNonAnimalBehavior(behavior: string): boolean {
 }
 
 export function isConfidentSpecies(row: CsvRow): boolean {
-  return !isUnidentifiedSpecies(row[3]) && !isEmptySpecies(row[3]);
+  // Never use Human as a burst anchor — people are frame-specific.
+  return (
+    !isUnidentifiedSpecies(row[3]) &&
+    !isEmptySpecies(row[3]) &&
+    !isHumanSpecies(row[3])
+  );
 }
 
 /** Row looks like an animal was seen but species was not resolved. */

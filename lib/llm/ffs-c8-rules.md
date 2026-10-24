@@ -44,3 +44,13 @@ If any animal tissue is clearly visible at the frame edge or mostly leaving/ente
 - Prefer a confident common name over "No animal detected" or "Partial animal visible at frame edge — species unconfirmed".
 - Only use "Unidentified" when the visible fragment is too small or ambiguous to support any species guess (e.g. a tiny blur with no shape). Do **not** use the old phrase "Partial animal visible at frame edge — species unconfirmed" as `species_common`.
 - Typical case: consecutive trap shots of the same elephant walking out of frame — each partial frame should still be labeled **Elephant** (count 1) when the visible bulk matches an elephant.
+
+## 10. HUMANS — Judge each frame on its own; do not invent or miss people
+
+People walk in and out between consecutive trap shots. Classify **only what is visible in this image**.
+
+- Use `species_common` **Human** (and `has_human` true) **only** when at least one person is clearly visible (face, body, clothing, or human silhouette you can confidently tell from wildlife).
+- Set `individual_count` to the number of **distinct people in this frame only** (e.g. 3 if three people are visible here).
+- If this frame has **no people**, do **not** label Human — even if neighboring file numbers in the same burst had people. Use wildlife species, or "No animal detected" if the frame is empty of animals and people.
+- If this frame **does** show people, never classify as "No animal detected" / "No animals visible". Prefer Human with the correct count.
+- Do not copy a human count from a different photo. Example pattern that must be avoided: labeling I__00126–I__00128 as Human when only I__00130 shows people; or labeling I__00131 as empty when three people are visible; or giving I__00133–I__00134 a count of 3 humans when those frames do not show three people.

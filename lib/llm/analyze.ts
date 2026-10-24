@@ -23,7 +23,7 @@ When NO animal is visible (truly empty — no body part at all):
 - behavior: brief scene/activity description (what is seen — not "N/A" or "Not Applicable")
 
 Other rules:
-- If humans are visible: has_human true, species_common "Human" (or "Human (N individuals)" if count > 1)
+- Humans: has_human true and species_common "Human" ONLY when people are clearly visible IN THIS FRAME. individual_count = number of people in this frame only. Never mark Human because a neighboring burst photo had people. Never mark "No animal detected" when people are visible.
 - Do not invent rare/exotic species; for clear partial Indian wildlife (elephant, deer, etc.), do make an intelligent guess.
 - Never use "Partial animal visible at frame edge — species unconfirmed" as species_common.
 - For background/secondary animals, follow the station verification rules (eye-shine alone is not enough).`;

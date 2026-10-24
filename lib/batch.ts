@@ -1,7 +1,7 @@
 import "server-only";
 
 import {
-  isUnidentifiedSpecies,
+  mustAnalyzeBurstFollowersIndependently,
   reconcileBurstSpecies,
 } from "./burst-species";
 import { analyzeImage } from "./llm/analyze";
@@ -284,12 +284,14 @@ async function processGroup(
     return applyBurstReconciliation(jobId, group, rows);
   }
 
-  const leaderUnclear = isUnidentifiedSpecies(leaderRow[3]);
+  // Do not copy Human or empty-frame results across a burst — people and
+  // blanks change shot-to-shot (e.g. I__00126 empty vs I__00130 with humans).
+  const analyzeEach = mustAnalyzeBurstFollowersIndependently(leaderRow[3]);
 
   for (let i = 1; i < group.length; i++) {
     const idx = group[i]!;
     try {
-      if (leaderUnclear) {
+      if (analyzeEach) {
         rows[i] = await processSingle(jobId, idx, files[idx]!);
       } else {
         rows[i] = await processFollower(jobId, idx, files[idx]!, leaderRow);
