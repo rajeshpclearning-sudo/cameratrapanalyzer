@@ -467,7 +467,7 @@ export default function Home() {
     const mergedErrors: string[] = [];
     let mergedStats: JobStats | undefined;
     let lastJobId = "";
-    let lastDownloadName = "Camera_Trap_Analysis.csv";
+    let lastDownloadName = "CTA.csv";
     let lastCsvContent: string | undefined;
     let lastSupabase: JobPollResponse["supabase"];
     let anyFailed = false;
@@ -555,8 +555,7 @@ export default function Home() {
               files: data.files,
               errors: data.errors ?? [],
               csvReady: data.csvReady ?? !!data.csvContent,
-              downloadFilename:
-                data.downloadFilename ?? "Camera_Trap_Analysis.csv",
+              downloadFilename: data.downloadFilename ?? "CTA.csv",
               stats: data.stats,
               supabase: data.supabase,
               csvContent: data.csvContent,
@@ -1135,7 +1134,7 @@ export default function Home() {
                     <button type="button" onClick={() => csvInputRef.current?.click()} className="flex min-h-11 w-full items-center justify-center space-x-sm rounded-lg border border-dashed border-outline-variant py-3 text-label-md text-on-surface-variant hover:border-primary hover:text-primary md:py-4">
                       <Icon name="upload_file" />
                       <span className="md:hidden">Optional CSV to append</span>
-                      <span className="hidden md:inline">Upload Camera_Trap_Analysis*.csv</span>
+                      <span className="hidden md:inline">Upload CTA_*.csv or Camera_Trap_Analysis*.csv</span>
                     </button>
                   )}
                 </div>

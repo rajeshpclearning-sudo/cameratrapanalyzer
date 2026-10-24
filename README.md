@@ -120,7 +120,7 @@ flowchart TD
 - Subtitle (product): “Connect Google Drive, analyze trap photos, update your spreadsheet automatically.”
 - Section titles: “1. Select images”, “2. Optional existing log (append)”, “3. Run analysis”
 - Primary CTA: **Run analysis**
-- Secondary CTA: **Download Camera_Trap_Analysis_YYYY-MM-DD.csv**
+- Secondary CTA: **Download CTA_YYYY-MM-DD_HHmmss.csv** (unique per run)
 
 ### Screen spec: Dashboard / Drive (planned)
 
@@ -332,7 +332,7 @@ npm run dev:clean
 1. **Select images** — on desktop: folder picker or individual files; on phone: **Choose photos** and pick from Google Drive / Files (JPEG, PNG, WebP, HEIC; max 50 per batch). Tap a row/card to preview.
 2. **Optional existing log** — upload a `Camera_Trap_Analysis*.csv` to **append** new rows (header must match spec below).
 3. **Run analysis** — progress per file; **date/time come from the photo’s EXIF** (`DateTimeOriginal` when the trap took the shot), read from the **original** file bytes before any resize. If the image has no EXIF (some phone/Drive exports strip it), the app falls back to the file’s last-modified time (often “today”). Before calling the AI, the server checks your **session CSV** and **Supabase** for the same **Photo Name**. Matches are marked **Already done** (no new AI call, no second database row). After a batch finishes, **upload more photos** in the same session — new uploads are auto-selected, already-analyzed photos are skipped, and **Analyze N new photo(s)** only processes waiting rows; results append to the session CSV (and Supabase when configured). Use **Clear results & re-analyze all** to wipe session memory; photos still in Supabase remain skipped unless you delete those rows in Table Editor first.
-4. **Download CSV** — new file `Camera_Trap_Analysis_YYYY-MM-DD.csv`, or same name as the uploaded log when appending.
+4. **Download CSV** — new file `CTA_YYYY-MM-DD_HHmmss.csv` (unique date + time), or same name as the uploaded log when appending.
 5. **Optional Supabase** — when configured, each **newly analyzed** row in a finished job is inserted into `camera_trap_sightings` (rows from an uploaded existing CSV or earlier session rows are not re-inserted).
 6. **Import Log** (sidebar) — upload a past analysis file in **Excel** (`.xlsx`, `.xls`) or **CSV** with the same column header as below. Preview rows, then **Import to Supabase**. If this browser imported a file with the **same filename** before, a warning appears and you must click **Import anyway** (tracking is per-browser in localStorage, not across devices). Re-importing still adds duplicate rows to Supabase.
 

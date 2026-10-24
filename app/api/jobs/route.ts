@@ -159,7 +159,7 @@ async function handlePost(request: Request) {
     existingCsvName =
       csvEntry instanceof File && csvEntry.name
         ? csvEntry.name
-        : "Camera_Trap_Analysis.csv";
+        : defaultCsvFilename();
   }
 
   const jobId = randomUUID();
