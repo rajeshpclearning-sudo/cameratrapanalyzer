@@ -148,7 +148,7 @@ export default function Home() {
           selected: true,
         });
       }
-      const merged = [...prev, ...added];
+      let merged = [...prev, ...added];
       if (merged.length > RECOMMENDED_FILES) {
         setError(
           `${merged.length} photos in this session (recommended ${RECOMMENDED_FILES}). Larger sets still work; they upload in smaller batches.`,
