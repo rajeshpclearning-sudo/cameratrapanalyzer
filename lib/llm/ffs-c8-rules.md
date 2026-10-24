@@ -49,8 +49,23 @@ If any animal tissue is clearly visible at the frame edge or mostly leaving/ente
 
 People walk in and out between consecutive trap shots. Classify **only what is visible in this image**.
 
-- Use `species_common` **Human** (and `has_human` true) **only** when at least one person is clearly visible (face, body, clothing, or human silhouette you can confidently tell from wildlife).
-- Set `individual_count` to the number of **distinct people in this frame only** (e.g. 3 if three people are visible here).
-- If this frame has **no people**, do **not** label Human — even if neighboring file numbers in the same burst had people. Use wildlife species, or "No animal detected" if the frame is empty of animals and people.
-- If this frame **does** show people, never classify as "No animal detected" / "No animals visible". Prefer Human with the correct count.
-- Do not copy a human count from a different photo. Example pattern that must be avoided: labeling I__00126–I__00128 as Human when only I__00130 shows people; or labeling I__00131 as empty when three people are visible; or giving I__00133–I__00134 a count of 3 humans when those frames do not show three people.
+Treat as **Human** (`has_human` true) when **any** of these are clearly visible in this frame:
+
+- Whole or partial person (face, body, clothing, silhouette)
+- **Human body parts at the camera or in frame** — e.g. fingers, hand, palm, arm, foot (even if only fingertips touch or enter the lens). Example: three fingers on the camera → **Human**, count `1` (one person), behavior noting hand/fingers at camera — do **not** leave this as empty or unspecified
+- **Clear human belongings / gear in the scene** that indicate a person (bag, backpack, sandals, shoes, water bottle, phone, clothing on the ground, etc.) with no wildlife that explains them. Example: bag and sandals visible → **Human**, count `1` unless more people are also visible — never "No animal detected" / "no human or animal visible"
+
+Counting:
+
+- `individual_count` = number of **distinct people** you can reasonably infer in this frame (bodies/faces). If only belongings or only a hand/fingers are visible, use **1**.
+- Do **not** count three fingers as three people.
+
+Empty frames:
+
+- Use "No animal detected" only when there is **no** wildlife **and** no person **and** no clear human body part **and** no clear human belongings.
+- If this frame **does** show people, body parts, or belongings as above, never classify as empty / "no human or animal visible".
+
+Burst neighbors:
+
+- Do not label Human only because a neighboring file had people.
+- Do not copy a human count from a different photo.

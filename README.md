@@ -594,7 +594,7 @@ Use JSON schema / structured output (OpenAI `json_schema` or Gemini JSON mode).
 - Station species rules live in [`lib/llm/ffs-c8-rules.md`](lib/llm/ffs-c8-rules.md) and are injected into **every** vision call by `lib/llm/analyze.ts`.
 - Agent skill for maintaining those rules: [`.cursor/skills/ffs-c8-photo-analysis/SKILL.md`](.cursor/skills/ffs-c8-photo-analysis/SKILL.md) (on accuracy feedback: update the rules file, log the correction, commit + push).
 - **Partial / edge-of-frame animals** (e.g. most of an elephant leaving the shot): make an intelligent species guess and count — do not label as empty or “partial unconfirmed”.
-- **Humans:** classify per frame only (burst dedupe does not copy Human or empty labels to neighbors). Count people visible in that photo only.
+- **Humans:** classify per frame only (burst dedupe does not copy Human or empty labels to neighbors). Count people in that photo; also treat clear **belongings** (bag, sandals) and **body parts** (fingers/hand at camera) as Human — not empty.
 - Count **visible** individuals only (including animals inferred from a clear partial body).
 - Behavior enum: `foraging`, `moving`, `standing`, `resting`, `drinking`, `running`, `unknown`, `N/A`.
 - **Do not** ask the LLM for date or time — use EXIF and Drive metadata only.

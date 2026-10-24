@@ -15,15 +15,16 @@ When an animal IS visible (including partial bodies at the frame edge):
 - individuals_description: same count as a string (e.g. "1")
 - behavior: one of foraging, moving, standing, resting, drinking, running, unknown
 
-When NO animal is visible (truly empty — no body part at all):
+When NO animal and NO human evidence is visible (truly empty):
 - has_animal: false
+- has_human: false
 - species_common: "No animal detected" (or "No animal – …" with a short scene note)
 - individual_count: 0
 - individuals_description: short text describing absence (e.g. "No animals visible")
 - behavior: brief scene/activity description (what is seen — not "N/A" or "Not Applicable")
 
 Other rules:
-- Humans: has_human true and species_common "Human" ONLY when people are clearly visible IN THIS FRAME. individual_count = number of people in this frame only. Never mark Human because a neighboring burst photo had people. Never mark "No animal detected" when people are visible.
+- Humans (this frame only): has_human true, species_common "Human", has_animal true when any person, human body part (fingers/hand/arm/foot at camera), or clear human belongings (bag, sandals, shoes, backpack, etc.) are visible. individual_count = distinct people (use 1 for belongings-only or hand/fingers-only). Never mark empty / "no human or animal visible" in those cases. Never invent humans from neighboring burst photos.
 - Do not invent rare/exotic species; for clear partial Indian wildlife (elephant, deer, etc.), do make an intelligent guess.
 - Never use "Partial animal visible at frame edge — species unconfirmed" as species_common.
 - For background/secondary animals, follow the station verification rules (eye-shine alone is not enough).`;
