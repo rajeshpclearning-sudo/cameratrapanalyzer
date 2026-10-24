@@ -103,7 +103,6 @@ export default function Home() {
   const savedHistoryRef = useRef(false);
   const completedByNameRef = useRef(completedByName);
   completedByNameRef.current = completedByName;
-  const folderInputRef = useRef<HTMLInputElement>(null);
   const filesInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
 
@@ -185,17 +184,15 @@ export default function Home() {
     });
   };
 
-  const onFolderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) addFiles(e.target.files);
-    e.target.value = "";
-  };
-
   const onFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) addFiles(e.target.files);
     e.target.value = "";
   };
 
-  /** Open folder picker at Downloads (one level up), not the last nested trap folder. */
+  /**
+   * Pick a trap folder / photos without Chrome's webkitdirectory
+   * "Upload N files… trust this site?" warning (that dialog cannot be turned off).
+   */
   const openFolderPicker = async () => {
     const result = await pickTrapImageFolder();
     if (result.ok) {
@@ -209,8 +206,9 @@ export default function Home() {
       return;
     }
     if (result.cancelled) return;
-    // Safari / older browsers: fall back to <input webkitdirectory>.
-    folderInputRef.current?.click();
+    // Safari / older browsers: multi-file picker only (not webkitdirectory —
+    // that always shows Chrome's trust warning and cannot be suppressed).
+    filesInputRef.current?.click();
   };
 
   const toggleFile = (id: string) => {
@@ -1075,7 +1073,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                <input ref={folderInputRef} type="file" accept={ACCEPT} multiple hidden data-ui-file-input className="hidden" onChange={onFolderChange} {...({ webkitdirectory: "" } as React.InputHTMLAttributes<HTMLInputElement>)} />
                 <input ref={filesInputRef} type="file" accept={ACCEPT} multiple hidden data-ui-file-input className="hidden" onChange={onFilesChange} />
                 <input ref={csvInputRef} type="file" accept=".csv,text/csv" hidden data-ui-file-input className="hidden" onChange={(e) => setExistingCsv(e.target.files?.[0] ?? null)} />
 
@@ -1099,7 +1096,9 @@ export default function Home() {
                   <button type="button" onClick={() => void openFolderPicker()} className="group flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-outline-variant bg-surface-container-low p-lg transition-colors hover:border-primary">
                     <Icon name="folder_zip" className="mb-sm text-4xl text-on-surface-variant group-hover:text-primary" />
                     <span className="text-headline-sm font-semibold">Upload Folder</span>
-                    <span className="mt-xs text-label-md text-on-surface-variant">Including HEIC from traps</span>
+                    <span className="mt-xs text-center text-label-md text-on-surface-variant">
+                      Starts in Downloads — pick your trap folder (no repeated trust popup)
+                    </span>
                   </button>
                   <button type="button" onClick={() => filesInputRef.current?.click()} className="group flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-outline-variant bg-surface-container-low p-lg transition-colors hover:border-primary">
                     <Icon name="upload_file" className="mb-sm text-4xl text-on-surface-variant group-hover:text-primary" />

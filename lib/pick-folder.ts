@@ -1,9 +1,8 @@
 /**
- * Open a folder picker that starts one level up from a nested trap folder
- * when possible (Downloads / Documents), instead of reopening the last folder.
+ * Pick trap photos without Chrome's webkitdirectory "trust this site?" interstitial.
  *
- * Native <input webkitdirectory> always remembers the previous folder — we
- * prefer showDirectoryPicker with a fresh id so startIn is honored.
+ * That warning is a Chrome security feature for <input webkitdirectory> and cannot
+ * be disabled. We use the File System Access API instead (directory or multi-file).
  */
 
 export type FolderPickResult =
@@ -29,7 +28,6 @@ async function filesFromDirectoryHandle(
   dir: FileSystemDirectoryHandle,
 ): Promise<File[]> {
   const out: File[] = [];
-  // TypeScript DOM libs vary; iterate via entries() when values() is missing.
   const iterable = dir as FileSystemDirectoryHandle & {
     values?: () => AsyncIterableIterator<FileSystemHandle>;
     entries?: () => AsyncIterableIterator<[string, FileSystemHandle]>;
@@ -52,58 +50,108 @@ async function filesFromDirectoryHandle(
   return out;
 }
 
+type WellKnownDirectory =
+  | "desktop"
+  | "documents"
+  | "downloads"
+  | "music"
+  | "pictures"
+  | "videos";
+
 type ShowDirectoryPickerOpts = {
   id?: string;
   mode?: "read" | "readwrite";
-  startIn?:
-    | "desktop"
-    | "documents"
-    | "downloads"
-    | "music"
-    | "pictures"
-    | "videos"
-    | FileSystemHandle;
+  startIn?: WellKnownDirectory | FileSystemHandle;
 };
 
+type ShowOpenFilePickerOpts = {
+  id?: string;
+  multiple?: boolean;
+  startIn?: WellKnownDirectory | FileSystemHandle;
+  types?: Array<{
+    description?: string;
+    accept: Record<string, string[]>;
+  }>;
+};
+
+function freshPickerId(prefix: string): string {
+  return `${prefix}${Date.now().toString(36)}`.slice(0, 32);
+}
+
+const IMAGE_OPEN_TYPES = [
+  {
+    description: "Camera trap images",
+    accept: {
+      "image/*": [".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"],
+    },
+  },
+];
+
 /**
- * Prefer Chrome/Edge directory picker starting in Downloads so the user
- * chooses a trap folder each time (not the previous nested folder).
+ * Pick a folder (Chrome/Edge) starting in Downloads — no webkitdirectory trust dialog.
+ * Falls back to multi-file picker (user can Select All inside a folder).
  */
 export async function pickTrapImageFolder(): Promise<FolderPickResult> {
   const w = window as Window & {
     showDirectoryPicker?: (
       options?: ShowDirectoryPickerOpts,
     ) => Promise<FileSystemDirectoryHandle>;
+    showOpenFilePicker?: (
+      options?: ShowOpenFilePickerOpts,
+    ) => Promise<FileSystemFileHandle[]>;
   };
 
-  if (typeof w.showDirectoryPicker !== "function") {
-    return {
-      ok: false,
-      cancelled: false,
-      error: "unsupported",
-    };
+  // 1) Directory picker (preferred): choose the trap folder itself.
+  if (typeof w.showDirectoryPicker === "function") {
+    try {
+      const dir = await w.showDirectoryPicker({
+        // Fresh id so Chrome honors startIn (Downloads) instead of last nested folder.
+        id: freshPickerId("ctad"),
+        mode: "read",
+        startIn: "downloads",
+      });
+      const files = await filesFromDirectoryHandle(dir);
+      return { ok: true, files, folderName: dir.name };
+    } catch (err) {
+      const name = err instanceof DOMException ? err.name : "";
+      if (name === "AbortError") {
+        return { ok: false, cancelled: true };
+      }
+      // Fall through to multi-file picker (still no webkitdirectory warning).
+    }
   }
 
-  try {
-    // New id each time → browser has no remembered path for this id →
-    // startIn: "downloads" is used (parent level vs last "Folder upload N").
-    const id = `cta${Date.now().toString(36)}`.slice(0, 32);
-    const dir = await w.showDirectoryPicker({
-      id,
-      mode: "read",
-      startIn: "downloads",
-    });
-    const files = await filesFromDirectoryHandle(dir);
-    return { ok: true, files, folderName: dir.name };
-  } catch (err) {
-    const name = err instanceof DOMException ? err.name : "";
-    if (name === "AbortError") {
-      return { ok: false, cancelled: true };
+  // 2) Multi-file picker: open Downloads, enter folder, Select All — no trust interstitial.
+  if (typeof w.showOpenFilePicker === "function") {
+    try {
+      const handles = await w.showOpenFilePicker({
+        id: freshPickerId("ctaf"),
+        multiple: true,
+        startIn: "downloads",
+        types: IMAGE_OPEN_TYPES,
+      });
+      const files: File[] = [];
+      for (const h of handles) {
+        const file = await h.getFile();
+        if (isImageFileName(file.name, file.type)) files.push(file);
+      }
+      return { ok: true, files, folderName: "selected photos" };
+    } catch (err) {
+      const name = err instanceof DOMException ? err.name : "";
+      if (name === "AbortError") {
+        return { ok: false, cancelled: true };
+      }
+      return {
+        ok: false,
+        cancelled: false,
+        error: err instanceof Error ? err.message : String(err),
+      };
     }
-    return {
-      ok: false,
-      cancelled: false,
-      error: err instanceof Error ? err.message : String(err),
-    };
   }
+
+  return {
+    ok: false,
+    cancelled: false,
+    error: "unsupported",
+  };
 }
