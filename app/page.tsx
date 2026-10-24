@@ -12,8 +12,13 @@ import {
 import { readApiJson } from "@/lib/api-client";
 import { getSessionStatusDisplay } from "@/lib/file-status-display";
 import { CSV_COL } from "@/lib/types";
-import type { CsvRow, FileJobState, JobPollResponse } from "@/lib/types";
+import type { CsvRow, FileJobState, JobPollResponse, JobStats } from "@/lib/types";
 import { buildSpeciesTally } from "@/lib/species-tally";
+import {
+  packUploadChunks,
+  shrinkImageForUpload,
+  type PreparedUpload,
+} from "@/lib/upload-chunks";
 
 const MAX_FILES = 50;
 const POLL_MS = 800;
@@ -76,6 +81,11 @@ export default function Home() {
   const [poll, setPoll] = useState<JobPollResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  /** When splitting a large folder across several Vercel-safe POSTs. */
+  const [chunkProgress, setChunkProgress] = useState<{
+    current: number;
+    total: number;
+  } | null>(null);
   const [stopping, setStopping] = useState(false);
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const [completedByName, setCompletedByName] = useState<
@@ -359,6 +369,41 @@ export default function Home() {
     syncCsvContent,
   ]);
 
+  const waitForJobComplete = useCallback((id: string): Promise<JobPollResponse> => {
+    return new Promise((resolve, reject) => {
+      stopPolling();
+      const tick = async () => {
+        try {
+          const res = await fetch(`/api/jobs/${id}`);
+          if (res.status === 404) {
+            stopPolling();
+            reject(
+              new Error(
+                "This analysis session expired. Run analysis again on the latest Vercel deploy.",
+              ),
+            );
+            return;
+          }
+          if (!res.ok) return;
+          const data = (await res.json()) as JobPollResponse;
+          setPoll(data);
+          if (
+            data.status === "completed" ||
+            data.status === "failed" ||
+            data.status === "cancelled"
+          ) {
+            stopPolling();
+            resolve(data);
+          }
+        } catch {
+          // keep polling on transient network errors
+        }
+      };
+      void tick();
+      pollRef.current = setInterval(() => void tick(), POLL_MS);
+    });
+  }, []);
+
   const runAnalysis = async () => {
     const selected = localFiles.filter(
       (f) => f.selected && !isFileAnalyzed(completedByName[f.file.name]),
@@ -371,12 +416,14 @@ export default function Home() {
     setError(null);
     setSubmitting(true);
     setStopping(false);
+    setChunkProgress(null);
     // Keep prior poll visible until the new result arrives (Vercel sync can take a while).
     setJobId(null);
     setSyncCsvContent(null);
 
-    const form = new FormData();
+    let prepared: PreparedUpload[];
     try {
+      prepared = [];
       for (const { file } of selected) {
         // Re-read bytes before upload (iOS/Drive pickers can hand empty or stale File handles).
         const buffer = await file.arrayBuffer();
@@ -391,7 +438,12 @@ export default function Home() {
           file.type && file.type !== "application/octet-stream"
             ? file.type
             : "image/jpeg";
-        form.append("files", new File([buffer], file.name, { type }));
+        const fresh = new File([buffer], file.name, {
+          type,
+          lastModified: file.lastModified,
+        });
+        // Shrink only when a single file would blow Vercel's ~4.5 MB body limit.
+        prepared.push(await shrinkImageForUpload(fresh));
       }
     } catch (err) {
       setError(
@@ -403,89 +455,189 @@ export default function Home() {
       return;
     }
 
-    if (existingCsv) {
-      form.append("existingCsv", existingCsv);
-    } else if (sessionCsv) {
-      const blob = new Blob([sessionCsv.content], { type: "text/csv" });
-      form.append("existingCsv", blob, sessionCsv.filename);
-    }
+    const chunks = packUploadChunks(prepared);
+
+    let csvForNext: { content: string; filename: string } | null = sessionCsv
+      ? { ...sessionCsv }
+      : null;
+    const existingCsvFile = existingCsv;
+
+    const mergedFiles: FileJobState[] = [];
+    const mergedErrors: string[] = [];
+    let mergedStats: JobStats | undefined;
+    let lastJobId = "";
+    let lastDownloadName = "Camera_Trap_Analysis.csv";
+    let lastCsvContent: string | undefined;
+    let lastSupabase: JobPollResponse["supabase"];
+    let anyFailed = false;
+
+    const applyFileResults = (files: FileJobState[]) => {
+      setCompletedByName((prev) => {
+        const next = { ...prev };
+        for (const f of files) {
+          if (
+            f.status === "done" ||
+            f.status === "skipped" ||
+            f.status === "already_done" ||
+            f.status === "error"
+          ) {
+            next[f.name] = f;
+          }
+        }
+        return next;
+      });
+    };
+
+    const mergeStats = (
+      a: JobStats | undefined,
+      b: JobStats | undefined,
+    ): JobStats | undefined => {
+      if (!a && !b) return undefined;
+      return {
+        emptySkipped: (a?.emptySkipped ?? 0) + (b?.emptySkipped ?? 0),
+        burstCopied: (a?.burstCopied ?? 0) + (b?.burstCopied ?? 0),
+        burstInferred: (a?.burstInferred ?? 0) + (b?.burstInferred ?? 0),
+        alreadyAnalyzed: (a?.alreadyAnalyzed ?? 0) + (b?.alreadyAnalyzed ?? 0),
+        llmCalls: (a?.llmCalls ?? 0) + (b?.llmCalls ?? 0),
+      };
+    };
 
     try {
-      const res = await fetch("/api/jobs", { method: "POST", body: form });
-      const parsed = await readApiJson<
-        Partial<JobPollResponse> & { jobId?: string; error?: string }
-      >(res);
-      if ("error" in parsed) {
-        setError(parsed.error);
-        setSubmitting(false);
-        return;
-      }
-      const { data } = parsed;
-      if (!res.ok || !data.jobId) {
-        setError(data.error ?? "Failed to start job");
-        setSubmitting(false);
-        return;
-      }
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i]!;
+        setChunkProgress({ current: i + 1, total: chunks.length });
 
-      const syncDone =
-        data.status === "completed" ||
-        data.status === "failed" ||
-        data.status === "cancelled";
+        const form = new FormData();
+        for (const item of chunk) {
+          form.append("files", item.file);
+        }
 
-      if (syncDone && data.status && data.files && data.total != null) {
-        const syncPoll: JobPollResponse = {
-          jobId: data.jobId,
-          status: data.status,
-          total: data.total,
-          completed: data.completed ?? data.total,
-          files: data.files,
-          errors: data.errors ?? [],
-          csvReady: data.csvReady ?? !!data.csvContent,
-          downloadFilename: data.downloadFilename ?? "Camera_Trap_Analysis.csv",
-          stats: data.stats,
-          supabase: data.supabase,
-          csvContent: data.csvContent,
-        };
+        if (i === 0 && existingCsvFile) {
+          form.append("existingCsv", existingCsvFile);
+        } else if (csvForNext) {
+          const blob = new Blob([csvForNext.content], { type: "text/csv" });
+          form.append("existingCsv", blob, csvForNext.filename);
+        }
+
+        const res = await fetch("/api/jobs", { method: "POST", body: form });
+        const parsed = await readApiJson<
+          Partial<JobPollResponse> & { jobId?: string; error?: string }
+        >(res);
+        if ("error" in parsed) {
+          setError(
+            chunks.length > 1
+              ? `Batch ${i + 1} of ${chunks.length}: ${parsed.error}`
+              : parsed.error,
+          );
+          setSubmitting(false);
+          setChunkProgress(null);
+          return;
+        }
+        const { data } = parsed;
+        if (!res.ok || !data.jobId) {
+          setError(data.error ?? "Failed to start job");
+          setSubmitting(false);
+          setChunkProgress(null);
+          return;
+        }
+
+        lastJobId = data.jobId;
         setJobId(data.jobId);
-        setPoll(syncPoll);
-        // Apply results immediately so the button does not flicker back to Run Analysis.
-        setCompletedByName((prev) => {
-          const next = { ...prev };
-          for (const f of syncPoll.files) {
-            if (
+
+        let result: JobPollResponse;
+
+        const syncDone =
+          data.status === "completed" ||
+          data.status === "failed" ||
+          data.status === "cancelled";
+
+        if (syncDone && data.status && data.files && data.total != null) {
+          result = {
+            jobId: data.jobId,
+            status: data.status,
+            total: data.total,
+            completed: data.completed ?? data.total,
+            files: data.files,
+            errors: data.errors ?? [],
+            csvReady: data.csvReady ?? !!data.csvContent,
+            downloadFilename:
+              data.downloadFilename ?? "Camera_Trap_Analysis.csv",
+            stats: data.stats,
+            supabase: data.supabase,
+            csvContent: data.csvContent,
+          };
+        } else {
+          // Local / Railway: wait for this chunk before starting the next.
+          result = await waitForJobComplete(data.jobId);
+        }
+
+        if (result.status === "failed") anyFailed = true;
+        mergedFiles.push(...result.files);
+        mergedErrors.push(...(result.errors ?? []));
+        mergedStats = mergeStats(mergedStats, result.stats);
+        lastDownloadName = result.downloadFilename;
+        lastSupabase = result.supabase;
+        if (result.csvContent) {
+          lastCsvContent = result.csvContent;
+          csvForNext = {
+            content: result.csvContent,
+            filename: result.downloadFilename,
+          };
+          setSyncCsvContent(result.csvContent);
+          setSessionCsv(csvForNext);
+        }
+
+        applyFileResults(result.files);
+
+        // Live combined progress for multi-chunk runs.
+        setPoll({
+          jobId: lastJobId,
+          status:
+            i < chunks.length - 1
+              ? "running"
+              : result.status === "cancelled"
+                ? "cancelled"
+                : anyFailed
+                  ? "failed"
+                  : "completed",
+          total: selected.length,
+          completed: mergedFiles.filter(
+            (f) =>
               f.status === "done" ||
               f.status === "skipped" ||
               f.status === "already_done" ||
-              f.status === "error"
-            ) {
-              next[f.name] = f;
-            }
-          }
-          return next;
+              f.status === "error",
+          ).length,
+          files: mergedFiles,
+          errors: mergedErrors,
+          csvReady: !!lastCsvContent,
+          downloadFilename: lastDownloadName,
+          stats: mergedStats,
+          supabase: lastSupabase,
+          csvContent: lastCsvContent,
         });
-        if (data.csvContent) setSyncCsvContent(data.csvContent);
-
-        const already = data.stats?.alreadyAnalyzed ?? 0;
-        const llm = data.stats?.llmCalls ?? 0;
-        if (data.status === "failed" && (data.errors?.length ?? 0) > 0) {
-          setError(data.errors!.join("; "));
-        } else if (already > 0 && llm === 0) {
-          setError(null);
-        } else if ((data.errors?.length ?? 0) > 0) {
-          setError(data.errors!.join("; "));
-        }
-
-        setSubmitting(false);
-        setStopping(false);
-        return;
       }
 
-      setPoll(null);
-      setJobId(data.jobId);
-      startPolling(data.jobId);
+      const already = mergedStats?.alreadyAnalyzed ?? 0;
+      const llm = mergedStats?.llmCalls ?? 0;
+      if (anyFailed && mergedErrors.length > 0) {
+        setError(mergedErrors.join("; "));
+      } else if (already > 0 && llm === 0) {
+        setError(null);
+      } else if (mergedErrors.length > 0) {
+        setError(mergedErrors.join("; "));
+      } else {
+        setError(null);
+      }
+
+      setSubmitting(false);
+      setStopping(false);
+      setChunkProgress(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Request failed");
       setSubmitting(false);
+      setStopping(false);
+      setChunkProgress(null);
     }
   };
 
@@ -537,6 +689,7 @@ export default function Home() {
     stopPolling();
     setSubmitting(false);
     setStopping(false);
+    setChunkProgress(null);
     savedHistoryRef.current = false;
     if (csvInputRef.current) csvInputRef.current.value = "";
   };
@@ -546,6 +699,7 @@ export default function Home() {
     setJobId(null);
     setSubmitting(false);
     setStopping(false);
+    setChunkProgress(null);
     setCompletedByName({});
     setSessionCsv(null);
     setSyncCsvContent(null);
@@ -588,7 +742,9 @@ export default function Home() {
       sessionFinished ||
       (poll.status === "completed" && hasUnanalyzedFiles));
   const analyzeButtonLabel = submitting
-    ? "Analyzing…"
+    ? chunkProgress && chunkProgress.total > 1
+      ? `Batch ${chunkProgress.current}/${chunkProgress.total}…`
+      : "Analyzing…"
     : canRunAnalysis
       ? analyzedCount > 0
         ? `Analyze ${unanalyzedSelected.length} new photo${unanalyzedSelected.length === 1 ? "" : "s"}`
@@ -600,7 +756,15 @@ export default function Home() {
           : "Run Analysis";
   const sessionStatusRaw = getSessionStatusDisplay(poll, submitting, stopping);
   const sessionStatus =
-    submitting && (!poll || poll.status === "completed" || poll.status === "cancelled" || poll.status === "failed")
+    submitting && chunkProgress && chunkProgress.total > 1
+      ? {
+          label: "Running",
+          icon: "sync" as const,
+          chipClass:
+            "border-primary/40 bg-primary/10 text-primary",
+          detail: `Upload batch ${chunkProgress.current} of ${chunkProgress.total} (Vercel size limit)`,
+        }
+      : submitting && (!poll || poll.status === "completed" || poll.status === "cancelled" || poll.status === "failed")
       ? {
           label: "Running",
           detail: `Starting analysis of ${unanalyzedSelected.length || "new"} photo(s)…`,
@@ -993,7 +1157,11 @@ export default function Home() {
                       className="hidden w-full items-center justify-center space-x-sm rounded-xl bg-primary py-4 text-headline-sm font-bold text-background opacity-80 md:flex"
                     >
                       <Icon name="sync" className="animate-spin" />
-                      <span>Analyzing…</span>
+                      <span>
+                        {chunkProgress && chunkProgress.total > 1
+                          ? `Batch ${chunkProgress.current}/${chunkProgress.total}…`
+                          : "Analyzing…"}
+                      </span>
                     </button>
                   )}
 
@@ -1212,7 +1380,11 @@ export default function Home() {
                 className="pointer-events-none flex min-h-12 flex-1 items-center justify-center gap-xs rounded-xl bg-primary font-bold text-background opacity-90"
               >
                 <Icon name="sync" className="animate-spin" />
-                <span>Analyzing…</span>
+                <span>
+                  {chunkProgress && chunkProgress.total > 1
+                    ? `Batch ${chunkProgress.current}/${chunkProgress.total}…`
+                    : "Analyzing…"}
+                </span>
               </button>
             ) : analysisRunning || stopping ? (
               <button
