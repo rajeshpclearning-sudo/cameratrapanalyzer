@@ -106,7 +106,7 @@ flowchart TD
 |--------|-------|--------|
 | Analyze | Enabled when ≥1 file selected and idle | Starts batch (may split into many small uploads on Vercel) |
 | Stop | Visible while uploading/analyzing | Stops further batches; in-flight photo may finish; tap Analyze again for remaining |
-| Download …csv | Visible when job completed or stopped with results | Downloads result file |
+| Download …xls | Visible when job completed or stopped with results | Excel spreadsheet; **Human (armed)** rows highlighted in red |
 
 **Empty states**
 
@@ -120,7 +120,7 @@ flowchart TD
 - Subtitle (product): “Connect Google Drive, analyze trap photos, update your spreadsheet automatically.”
 - Section titles: “1. Select images”, “2. Optional existing log (append)”, “3. Run analysis”
 - Primary CTA: **Run analysis**
-- Secondary CTA: **Download CTA_YYYY-MM-DD_HHmmss.csv** (unique per run)
+- Secondary CTA: **Download CTA_YYYY-MM-DD_HHmmss.xls** (unique per run; armed humans in red)
 
 ### Screen spec: Dashboard / Drive (planned)
 
@@ -332,7 +332,7 @@ npm run dev:clean
 1. **Select images** — on desktop: **Upload Folder** uses Chrome’s directory picker (starts in **Downloads**) so you are not stuck in the last trap folder and you avoid Chrome’s repeated “Upload N files… trust this site?” warning (that warning only happens with old folder-input uploads and cannot be turned off). Or use individual files. On phone: **Choose photos** from Google Drive / Files (JPEG, PNG, WebP, HEIC; recommended 50). Tap a row/card to preview.
 2. **Optional existing log** — upload a `Camera_Trap_Analysis*.csv` to **append** new rows (header must match spec below).
 3. **Run analysis** — progress per file; **date/time come from the photo’s EXIF** (`DateTimeOriginal` when the trap took the shot), read from the **original** file bytes before any resize. If the image has no EXIF (some phone/Drive exports strip it), the app falls back to the file’s last-modified time (often “today”). Before calling the AI, the server checks your **session CSV** and **Supabase** for the same **Photo Name**. Matches are marked **Already done** (no new AI call, no second database row). Tap **Stop** anytime to halt remaining photos (the one already uploading may finish). After a stop or a full run, **upload more photos** in the same session — new uploads are auto-selected, already-analyzed photos are skipped, and **Analyze N new photo(s)** only processes waiting rows; results append to the session CSV (and Supabase when configured). Use **Clear results & re-analyze all** to wipe session memory; photos still in Supabase remain skipped unless you delete those rows in Table Editor first.
-4. **Download CSV** — new file `CTA_YYYY-MM-DD_HHmmss.csv` (unique date + time), or same name as the uploaded log when appending. Rows are sorted by **Photo Name** in natural order (e.g. `I__00071` … `I__00120`).
+4. **Download results** — Excel file `CTA_YYYY-MM-DD_HHmmss.xls` (opens in Excel/Sheets). **Human (armed)** rows are highlighted in **red**. Session append still uses CSV under the hood. Rows are sorted by **Photo Name** in natural order (e.g. `I__00071` … `I__00120`). Plain CSV remains available at `/api/jobs/[id]/download?format=csv` if needed.
 5. **Optional Supabase** — when configured, each **newly analyzed** row in a finished job is inserted into `camera_trap_sightings` (rows from an uploaded existing CSV or earlier session rows are not re-inserted).
 6. **Import Log** (sidebar) — upload a past analysis file in **Excel** (`.xlsx`, `.xls`) or **CSV** with the same column header as below. Preview rows, then **Import to Supabase**. If this browser imported a file with the **same filename** before, a warning appears and you must click **Import anyway** (tracking is per-browser in localStorage, not across devices). Re-importing still adds duplicate rows to Supabase.
 
@@ -413,7 +413,7 @@ Do **not** use the **publishable** key (`sb_publishable_...`) — that one is fo
 | `POST` | `/api/jobs` | `multipart/form-data`: `files[]`, optional `existingCsv`. On **Vercel**, awaits the batch and returns full job status + `csvContent`. Local/Railway return `{ jobId }` and process in the background. |
 | `POST` | `/api/import-sightings` | `multipart/form-data`: `file`; optional `dryRun=true` for preview only |
 | `GET` | `/api/jobs/[id]` | Poll job status (local/Railway) |
-| `GET` | `/api/jobs/[id]/download` | Download CSV when complete (local/Railway; Vercel client downloads from the sync POST body) |
+| `GET` | `/api/jobs/[id]/download` | Download spreadsheet (`.xls`, armed humans in red) when complete; `?format=csv` for plain CSV |
 
 ### Optional env
 
@@ -595,7 +595,7 @@ Use JSON schema / structured output (OpenAI `json_schema` or Gemini JSON mode).
 - Agent skill for maintaining those rules: [`.cursor/skills/ffs-c8-photo-analysis/SKILL.md`](.cursor/skills/ffs-c8-photo-analysis/SKILL.md) (on accuracy feedback: update the rules file, log the correction, commit + push).
 - **Partial / edge-of-frame animals** (e.g. most of an elephant leaving the shot): make an intelligent species guess and count — do not label as empty or “partial unconfirmed”.
 - **Humans:** classify per frame only (burst dedupe does not copy Human or empty labels to neighbors). Count people in that photo; also treat clear **belongings** (bag, sandals) and **body parts** (fingers/hand at camera) as Human — not empty.
-- **Armed humans:** if a person clearly carries a weapon, species is **Human (armed)** and that row is highlighted **in red** on the analysis dashboard (and in the photo preview).
+- **Armed humans:** if a person clearly carries a weapon, species is **Human (armed)** and that row is highlighted **in red** on the analysis dashboard, in the photo preview, and in the downloaded `.xls` spreadsheet (plain CSV cannot store colors).
 - Count **visible** individuals only (including animals inferred from a clear partial body).
 - Behavior enum: `foraging`, `moving`, `standing`, `resting`, `drinking`, `running`, `unknown`, `N/A`.
 - **Do not** ask the LLM for date or time — use EXIF and Drive metadata only.

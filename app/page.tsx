@@ -14,6 +14,11 @@ import { getSessionStatusDisplay } from "@/lib/file-status-display";
 import { CSV_COL } from "@/lib/types";
 import type { CsvRow, FileJobState, JobPollResponse, JobStats } from "@/lib/types";
 import { isArmedHumanSpecies } from "@/lib/burst-species";
+import {
+  buildArmedHighlightSpreadsheet,
+  rowsFromCsvContent,
+  spreadsheetDownloadFilename,
+} from "@/lib/excel-export";
 import { buildSpeciesTally } from "@/lib/species-tally";
 import {
   buildExifOverridesPayload,
@@ -807,20 +812,27 @@ export default function Home() {
   };
 
   const downloadCsv = () => {
+    // Plain CSV cannot store cell colors. Download SpreadsheetML (.xls) so
+    // Excel/Sheets show Human (armed) rows in red.
     const csvText = syncCsvContent ?? poll?.csvContent ?? null;
     const filename = poll?.downloadFilename;
     if (csvText && filename) {
-      const blob = new Blob([csvText], { type: "text/csv;charset=utf-8" });
+      const rows = rowsFromCsvContent(csvText);
+      const xml = buildArmedHighlightSpreadsheet(rows);
+      const xlsName = spreadsheetDownloadFilename(filename);
+      const blob = new Blob([xml], {
+        type: "application/vnd.ms-excel;charset=utf-8",
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = filename;
+      a.download = xlsName;
       a.click();
       URL.revokeObjectURL(url);
       return;
     }
     if (!jobId) return;
-    window.location.href = `/api/jobs/${jobId}/download`;
+    window.location.href = `/api/jobs/${jobId}/download?format=xls`;
   };
 
   const resetSession = () => {
@@ -1462,8 +1474,8 @@ export default function Home() {
                     <Icon name="download" />
                     <span>
                       {csvReady && poll?.downloadFilename
-                        ? `Download ${poll.downloadFilename}`
-                        : "Download Result (.CSV)"}
+                        ? `Download ${spreadsheetDownloadFilename(poll.downloadFilename)}`
+                        : "Download Result (.xls)"}
                     </span>
                   </button>
 
@@ -1573,7 +1585,7 @@ export default function Home() {
               disabled={!csvReady || submitting}
               onClick={downloadCsv}
               className={`flex min-h-12 min-w-12 items-center justify-center rounded-xl border border-primary text-primary ${csvReady && !submitting ? "" : "cursor-not-allowed opacity-40"}`}
-              aria-label="Download CSV"
+              aria-label="Download spreadsheet"
             >
               <Icon name="download" />
             </button>
