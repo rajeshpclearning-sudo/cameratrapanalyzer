@@ -86,8 +86,8 @@ flowchart TD
 | Zone | Content | Components |
 |------|---------|------------|
 | **Header** | Title + one-line subtitle | `H1` “Camera Trap Analyzer”; subtitle explains local MVP or product tagline |
-| **Global error** | Validation / API errors | Banner (red border); e.g. max 50 files, missing API key, HEIC rejected |
-| **Section 1 — Select images** | Ingest | Section card; labels “Folder” and “Or individual files”; native file inputs; hint text (formats, max 50); toolbar: Select all, Deselect all, Remove selected; scrollable **file list** (checkbox + filename); counter “N of M selected” |
+| **Global error** | Validation / API errors | Banner (red border); e.g. over recommended file count, missing API key, HEIC rejected |
+| **Section 1 — Select images** | Ingest | Section card; labels “Folder” and “Or individual files”; native file inputs; hint text (formats, recommended 50); toolbar: Select all, Deselect all, Remove selected; scrollable **file list** (checkbox + filename); counter “N of M selected” |
 | **Section 2 — Optional log** | Append mode | Section card; CSV file input; hint “Will append to: {filename}” when chosen |
 | **Section 3 — Run analysis** | Action + feedback | Primary **Analyze** when idle; while running, **Stop** (header + sticky bar) cancels further batches; secondary **Download {filename}** when ready; **progress bar** + “completed / total”; **status list** per file |
 
@@ -153,7 +153,7 @@ Each analyzed photo becomes **one row**. Designers can mock this as a table or G
 
 ### Error and edge cases (include in prototypes)
 
-- More than 50 files selected → blocking message.
+- More than the recommended 50 files → soft notice (uploads still allowed; split into batches).
 - HEIC / HEIF uploaded → reject with clear message (MVP).
 - Missing OpenAI key (dev) → “API key not configured” on run.
 - Partial batch failure → some rows Done, some Error; job can still complete with downloadable CSV for successes.
@@ -217,7 +217,7 @@ Use the same Vercel URL on your phone browser (Chrome or Safari).
 
 1. Open the site → tap the **menu** (☰) for Analysis, Log Library, or Import Log.
 2. On **Analysis**, tap **Choose photos**.
-3. In the phone’s file picker, open **Google Drive** (or Files) and select trap images (max 50 per run).
+3. In the phone’s file picker, open **Google Drive** (or Files) and select trap images (recommended 50 per session; more is allowed).
 4. Tap **Run Analysis** on the sticky bar at the bottom. Wait for **Analyzing…** to finish (on Vercel this can take a bit for each new batch).
 5. When finished, tap the download icon for the CSV (and check Supabase if configured). If a photo shows **Already done**, it was already in your log/Supabase — it will not be re-analyzed.
 
@@ -329,7 +329,7 @@ npm run dev:clean
 
 ### Usage
 
-1. **Select images** — on desktop: **Upload Folder** uses Chrome’s directory picker (starts in **Downloads**) so you are not stuck in the last trap folder and you avoid Chrome’s repeated “Upload N files… trust this site?” warning (that warning only happens with old folder-input uploads and cannot be turned off). Or use individual files. On phone: **Choose photos** from Google Drive / Files (JPEG, PNG, WebP, HEIC; max 50 per batch). Tap a row/card to preview.
+1. **Select images** — on desktop: **Upload Folder** uses Chrome’s directory picker (starts in **Downloads**) so you are not stuck in the last trap folder and you avoid Chrome’s repeated “Upload N files… trust this site?” warning (that warning only happens with old folder-input uploads and cannot be turned off). Or use individual files. On phone: **Choose photos** from Google Drive / Files (JPEG, PNG, WebP, HEIC; recommended 50). Tap a row/card to preview.
 2. **Optional existing log** — upload a `Camera_Trap_Analysis*.csv` to **append** new rows (header must match spec below).
 3. **Run analysis** — progress per file; **date/time come from the photo’s EXIF** (`DateTimeOriginal` when the trap took the shot), read from the **original** file bytes before any resize. If the image has no EXIF (some phone/Drive exports strip it), the app falls back to the file’s last-modified time (often “today”). Before calling the AI, the server checks your **session CSV** and **Supabase** for the same **Photo Name**. Matches are marked **Already done** (no new AI call, no second database row). Tap **Stop** anytime to halt remaining photos (the one already uploading may finish). After a stop or a full run, **upload more photos** in the same session — new uploads are auto-selected, already-analyzed photos are skipped, and **Analyze N new photo(s)** only processes waiting rows; results append to the session CSV (and Supabase when configured). Use **Clear results & re-analyze all** to wipe session memory; photos still in Supabase remain skipped unless you delete those rows in Table Editor first.
 4. **Download CSV** — new file `CTA_YYYY-MM-DD_HHmmss.csv` (unique date + time), or same name as the uploaded log when appending. Rows are sorted by **Photo Name** in natural order (e.g. `I__00071` … `I__00120`).

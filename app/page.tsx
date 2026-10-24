@@ -22,7 +22,8 @@ import {
 } from "@/lib/upload-chunks";
 import { pickTrapImageFolder } from "@/lib/pick-folder";
 
-const MAX_FILES = 50;
+/** Soft guidance only — users may add more; uploads are chunked. */
+const RECOMMENDED_FILES = 50;
 const POLL_MS = 800;
 const ACCEPT =
   "image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif";
@@ -147,10 +148,11 @@ export default function Home() {
           selected: true,
         });
       }
-      let merged = [...prev, ...added];
-      if (merged.length > MAX_FILES) {
-        setError(`Maximum ${MAX_FILES} files; remove some before adding more.`);
-        merged = merged.slice(0, MAX_FILES);
+      const merged = [...prev, ...added];
+      if (merged.length > RECOMMENDED_FILES) {
+        setError(
+          `${merged.length} photos in this session (recommended ${RECOMMENDED_FILES}). Larger sets still work; they upload in smaller batches.`,
+        );
       } else {
         setError(null);
       }
@@ -1189,7 +1191,7 @@ export default function Home() {
                     <Icon name="add_photo_alternate" className="mb-sm text-5xl text-primary" />
                     <span className="text-headline-sm font-semibold">Choose photos</span>
                     <span className="mt-xs max-w-xs text-center text-label-md text-on-surface-variant">
-                      Open Google Drive or Files in the picker, then select images (max {MAX_FILES})
+                      Open Google Drive or Files in the picker, then select images (recommended {RECOMMENDED_FILES})
                     </span>
                   </button>
                 </div>
@@ -1206,7 +1208,7 @@ export default function Home() {
                   <button type="button" onClick={() => filesInputRef.current?.click()} className="group flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-outline-variant bg-surface-container-low p-lg transition-colors hover:border-primary">
                     <Icon name="upload_file" className="mb-sm text-4xl text-on-surface-variant group-hover:text-primary" />
                     <span className="text-headline-sm font-semibold">Individual Files</span>
-                    <span className="mt-xs text-label-md text-on-surface-variant">JPEG, PNG, WebP, HEIC (max {MAX_FILES})</span>
+                    <span className="mt-xs text-label-md text-on-surface-variant">JPEG, PNG, WebP, HEIC (recommended {RECOMMENDED_FILES})</span>
                   </button>
                 </div>
 
