@@ -20,6 +20,7 @@ import {
   prepareUploadFile,
   type PreparedUpload,
 } from "@/lib/upload-chunks";
+import { pickTrapImageFolder } from "@/lib/pick-folder";
 
 const MAX_FILES = 50;
 const POLL_MS = 800;
@@ -192,6 +193,24 @@ export default function Home() {
   const onFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) addFiles(e.target.files);
     e.target.value = "";
+  };
+
+  /** Open folder picker at Downloads (one level up), not the last nested trap folder. */
+  const openFolderPicker = async () => {
+    const result = await pickTrapImageFolder();
+    if (result.ok) {
+      if (result.files.length === 0) {
+        setError(
+          `No images found in “${result.folderName}”. Pick a folder that contains JPG/PNG photos.`,
+        );
+        return;
+      }
+      addFiles(result.files);
+      return;
+    }
+    if (result.cancelled) return;
+    // Safari / older browsers: fall back to <input webkitdirectory>.
+    folderInputRef.current?.click();
   };
 
   const toggleFile = (id: string) => {
@@ -1077,7 +1096,7 @@ export default function Home() {
 
                 {/* Desktop: folder + individual files */}
                 <div className="hidden grid-cols-1 gap-md md:grid md:grid-cols-2">
-                  <button type="button" onClick={() => folderInputRef.current?.click()} className="group flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-outline-variant bg-surface-container-low p-lg transition-colors hover:border-primary">
+                  <button type="button" onClick={() => void openFolderPicker()} className="group flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-outline-variant bg-surface-container-low p-lg transition-colors hover:border-primary">
                     <Icon name="folder_zip" className="mb-sm text-4xl text-on-surface-variant group-hover:text-primary" />
                     <span className="text-headline-sm font-semibold">Upload Folder</span>
                     <span className="mt-xs text-label-md text-on-surface-variant">Including HEIC from traps</span>
