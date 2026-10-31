@@ -1008,14 +1008,9 @@ export default function Home() {
               height={96}
               className="h-24 w-24 rounded-full object-cover shadow-sm"
             />
-            <div className="flex flex-col items-center gap-0.5">
-              <h1 className="text-headline-sm font-bold text-primary">
-                WildEye Analyzer
-              </h1>
-              <span className="font-mono text-[10px] uppercase tracking-wider text-on-surface-variant">
-                Local Station · Path A · Local
-              </span>
-            </div>
+            <h1 className="text-headline-sm font-bold text-primary">
+              WildEye Analyzer
+            </h1>
           </div>
         </div>
 

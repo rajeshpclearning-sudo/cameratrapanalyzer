@@ -87,7 +87,7 @@ flowchart TD
 
 | Zone | Content | Components |
 |------|---------|------------|
-| **Sidebar brand** | Forest First + product | Large circular **Forest First** logo (`public/ffs-logo.png`, circle-only / no black box); title **WildEye Analyzer**; subtitle Local Station · Path A · Local |
+| **Sidebar brand** | Forest First + product | Large circular **Forest First** logo (`public/ffs-logo.png`, circle-only / no black box); title **WildEye Analyzer** |
 | **Sidebar Help** | Onboarding + contact | **Help** expands to: Quick Help guide (PDF) and **Email Forest First** (`mailto:forestfirst.ai@gmail.com`) |
 | **Header** | Session context | Sticky top bar: session / filename, running status, **Stop** when analyzing |
 | **Global error** | Validation / API errors | Banner (red border); e.g. over recommended file count, missing API key, HEIC rejected |
