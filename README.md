@@ -85,7 +85,8 @@ flowchart TD
 
 | Zone | Content | Components |
 |------|---------|------------|
-| **Header** | Title + one-line subtitle | `H1` “Camera Trap Analyzer”; subtitle explains local MVP or product tagline |
+| **Sidebar brand** | Forest First + product | Large circular **Forest First** logo (`public/ffs-logo.png`, circle-only / no black box); title **WildEye Analyzer**; subtitle Local Station · Path A · Local |
+| **Header** | Session context | Sticky top bar: session / filename, running status, **Stop** when analyzing |
 | **Global error** | Validation / API errors | Banner (red border); e.g. over recommended file count, missing API key, HEIC rejected |
 | **Section 1 — Select images** | Ingest | Section card; labels “Folder” and “Or individual files”; native file inputs; hint text (formats, recommended 50); toolbar: Select all, Deselect all, Remove selected; scrollable **file list** (checkbox + filename); counter “N of M selected” |
 | **Section 2 — Optional log** | Append mode | Section card; CSV file input; hint “Will append to: {filename}” when chosen |
@@ -682,6 +683,8 @@ Rough savings: downscaling 50–80% image tokens; skipping empty frames 30–70%
 ## Planned project structure
 
 ```
+├── public/
+│   └── ffs-logo.png                # Forest First circular badge (sidebar hero)
 ├── app/
 │   ├── page.tsx                    # Landing + sign-in
 │   ├── dashboard/page.tsx          # Folder browse + select + run

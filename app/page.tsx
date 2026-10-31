@@ -989,31 +989,32 @@ export default function Home() {
           navOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between px-sm py-md">
-          <h1 className="text-headline-sm font-bold text-primary">
-            WildEye Analyzer
-          </h1>
+        <div className="relative mb-md px-sm pt-md">
           <button
             type="button"
-            className="flex h-11 w-11 items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container-highest md:hidden"
+            className="absolute right-0 top-md flex h-11 w-11 items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container-highest md:hidden"
             aria-label="Close menu"
             onClick={() => setNavOpen(false)}
           >
             <Icon name="close" />
           </button>
-        </div>
-
-        <div className="mb-md flex items-center space-x-sm px-sm py-xs">
-          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-outline-variant bg-surface-container-highest">
-            <Icon name="forest" className="text-primary text-xl" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-label-md font-bold text-on-surface">
-              Local Station
-            </span>
-            <span className="font-mono text-[10px] uppercase tracking-wider text-on-surface-variant">
-              Path A · Local
-            </span>
+          <div className="flex flex-col items-center gap-sm text-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/ffs-logo.png"
+              alt="Forest First — Conserving Canopies"
+              width={96}
+              height={96}
+              className="h-24 w-24 rounded-full object-cover shadow-sm"
+            />
+            <div className="flex flex-col items-center gap-0.5">
+              <h1 className="text-headline-sm font-bold text-primary">
+                WildEye Analyzer
+              </h1>
+              <span className="font-mono text-[10px] uppercase tracking-wider text-on-surface-variant">
+                Local Station · Path A · Local
+              </span>
+            </div>
           </div>
         </div>
 
