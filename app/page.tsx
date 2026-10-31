@@ -83,6 +83,7 @@ function isImageFile(f: File): boolean {
 export default function Home() {
   const [view, setView] = useState<View>("analysis");
   const [navOpen, setNavOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [localFiles, setLocalFiles] = useState<LocalFile[]>([]);
   const [thumbUrls, setThumbUrls] = useState<Record<string, string>>({});
   const [existingCsv, setExistingCsv] = useState<File | null>(null);
@@ -1053,10 +1054,41 @@ export default function Home() {
         </button>
 
         <div className="space-y-1 border-t border-outline-variant pt-sm">
-          <span className="flex cursor-not-allowed items-center space-x-sm rounded-xl px-sm py-2 text-on-surface-variant opacity-50">
-            <Icon name="support_agent" />
-            <span className="text-label-md">Support</span>
-          </span>
+          <button
+            type="button"
+            onClick={() => setHelpOpen((open) => !open)}
+            className="flex w-full items-center justify-between rounded-xl px-sm py-2 text-on-surface-variant transition-colors hover:bg-surface-container-highest hover:text-primary"
+            aria-expanded={helpOpen}
+          >
+            <span className="flex items-center space-x-sm">
+              <Icon name="help" />
+              <span className="text-label-md">Help</span>
+            </span>
+            <Icon
+              name={helpOpen ? "expand_less" : "expand_more"}
+              className="text-lg"
+            />
+          </button>
+          {helpOpen && (
+            <div className="ml-sm space-y-1 border-l border-outline-variant/60 pl-sm">
+              <a
+                href="/WildEye_Analyzer_Quick_Help.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex min-h-11 items-center gap-sm rounded-xl px-sm py-2 text-label-md text-on-surface transition-colors hover:bg-surface-container-highest hover:text-primary"
+              >
+                <Icon name="picture_as_pdf" className="text-lg" />
+                <span>Quick Help guide (PDF)</span>
+              </a>
+              <a
+                href="mailto:forestfirst.ai@gmail.com?subject=WildEye%20Analyzer%20help"
+                className="flex min-h-11 items-center gap-sm rounded-xl px-sm py-2 text-label-md text-on-surface transition-colors hover:bg-surface-container-highest hover:text-primary"
+              >
+                <Icon name="mail" className="text-lg" />
+                <span>Email Forest First</span>
+              </a>
+            </div>
+          )}
         </div>
       </aside>
 

@@ -4,7 +4,9 @@
 
 **Camera Trap Photo Analyzer** helps researchers and field teams turn **camera-trap photos** into a **structured wildlife log** (spreadsheet). For each image, the app records **when** the photo was taken, **what species** appeared (common name only), **how many** individuals, and **what they were doing** (foraging, moving, standing, etc.). Empty frames and human detections are handled with explicit rules.
 
-**Today (local MVP):** User picks photos from their computer → AI analyzes each image → user **downloads a CSV** (or appends to an existing log file).
+**Today (local MVP):** User picks photos from their computer → AI analyzes each image → user **downloads a spreadsheet** (or appends to an existing log file).
+
+**First-time users:** open **Help** in the left sidebar for the Quick Help PDF (`/WildEye_Analyzer_Quick_Help.pdf`) or email Forest First (`forestfirst.ai@gmail.com`). Source copies also live in [`docs/`](docs/) (Word + PDF).
 
 **Planned (full product):** User signs in with Google → picks a **Drive folder** of trap images → AI analyzes → results **append to a Google Sheet** in the same folder (create sheet if none exists).
 
@@ -86,6 +88,7 @@ flowchart TD
 | Zone | Content | Components |
 |------|---------|------------|
 | **Sidebar brand** | Forest First + product | Large circular **Forest First** logo (`public/ffs-logo.png`, circle-only / no black box); title **WildEye Analyzer**; subtitle Local Station · Path A · Local |
+| **Sidebar Help** | Onboarding + contact | **Help** expands to: Quick Help guide (PDF) and **Email Forest First** (`mailto:forestfirst.ai@gmail.com`) |
 | **Header** | Session context | Sticky top bar: session / filename, running status, **Stop** when analyzing |
 | **Global error** | Validation / API errors | Banner (red border); e.g. over recommended file count, missing API key, HEIC rejected |
 | **Section 1 — Select images** | Ingest | Section card; labels “Folder” and “Or individual files”; native file inputs; hint text (formats, recommended 50); toolbar: Select all, Deselect all, Remove selected; scrollable **file list** (checkbox + filename); counter “N of M selected” |
@@ -684,7 +687,11 @@ Rough savings: downscaling 50–80% image tokens; skipping empty frames 30–70%
 
 ```
 ├── public/
-│   └── ffs-logo.png                # Forest First circular badge (sidebar hero)
+│   ├── ffs-logo.png                # Forest First circular badge (sidebar hero)
+│   └── WildEye_Analyzer_Quick_Help.pdf  # First-time user guide (sidebar Help)
+├── docs/
+│   ├── WildEye_Analyzer_Quick_Help.docx
+│   └── WildEye_Analyzer_Quick_Help.pdf
 ├── app/
 │   ├── page.tsx                    # Landing + sign-in
 │   ├── dashboard/page.tsx          # Folder browse + select + run
