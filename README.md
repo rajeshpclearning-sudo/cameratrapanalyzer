@@ -6,7 +6,7 @@
 
 **Today (local MVP):** User picks photos from their computer → AI analyzes each image → user **downloads a spreadsheet** (or appends to an existing log file).
 
-**First-time users:** open **Help** in the left sidebar for the Quick Help PDF (`/WildEye_Analyzer_Quick_Help.pdf`) or email Forest First (`forestfirst.ai@gmail.com`). Source copies also live in [`docs/`](docs/) (Word + PDF).
+**First-time users:** open **Help** in the left sidebar for the Quick Help PDF (`/WildEye_Analyzer_Quick_Help.pdf`) or email Forest First (`forestfirst.ai@gmail.com`). The guide covers folder-name rules for Excel columns (SourceFile / Senna / year / trap nights), armed-human highlighting, multi-species `+` labels, Species Rules / Mark error, and Stop / Already done. Source copies also live in [`docs/`](docs/) (Word + PDF).
 
 **Planned (full product):** User signs in with Google → picks a **Drive folder** of trap images → AI analyzes → results **append to a Google Sheet** in the same folder (create sheet if none exists).
 
@@ -32,8 +32,9 @@ Use this section to design screens in [Stitch](https://stitch.withgoogle.com). I
 1. **Ingest** — Many trap images at once (folder or multi-select).
 2. **Analyze** — Vision AI per image (server-side); date/time from photo metadata, not from AI.
 3. **Export** — Tabular log with fixed columns; **append** to existing log when one already exists.
-4. *(Planned)* **Google Drive** — Browse folder, thumbnails, select subset; write to Sheet in Drive.
-5. *(Planned)* **Sign-in** — Google OAuth; no anonymous access in production.
+4. *(Planned)* **Google Drive photo pick** — Optional **From Google Drive** (Google Picker + sign-in) so users can load trap photos from Drive into the same analysis list as local files. **Not deployed yet** — enable when the team is ready (GCP OAuth + env keys). See [Google Drive integration (planned)](#google-drive-integration-planned).
+5. *(Planned)* **App-wide sign-in** — Require Google before use; no anonymous access in production.
+6. *(Planned)* **Sheets in Drive** — Append analysis rows to a Google Sheet in the same Drive folder.
 
 ### Screen map
 
@@ -43,8 +44,8 @@ Use this section to design screens in [Stitch](https://stitch.withgoogle.com). I
 | **Import Log** | Built | Upload past analysis (.xlsx, .xls, .csv) directly to Supabase — no photos required |
 | **Species Rules** | Built | Consolidated FFS Station C8 wild-animal rules + corrections log; pending preview feedback |
 | **Log Library** | Built | Browser localStorage history of past analysis runs (up to 30) |
-| **Sign in** | Planned | Google OAuth; explain Drive + Sheets permissions |
-| **Dashboard / Select from Drive** | Planned | Paste or browse folder ID; grid of images with checkboxes and thumbnails |
+| **Sign in** | Planned | Google OAuth (Drive pick and/or full app gate); explain Drive + Sheets permissions |
+| **Dashboard / Select from Drive** | Planned | Browse or pick Drive folder/photos; join analysis list; later: dedicated dashboard + Sheet-in-folder |
 | **Output target** | Planned | Show resolved Sheet (append vs new); optional override picker |
 | **Job progress** | Partial (section on Home today) | Per-file status; overall progress; errors; link to Sheet or download |
 | **Job complete / Summary** | Partial | Download CSV or “Open in Google Sheets”; filename used; error list |
@@ -188,7 +189,7 @@ Each analyzed photo becomes **one row**. Designers can mock this as a table or G
 | Vercel deploy (sync analysis in one request) | Done |
 | Auto-split large uploads under Vercel ~4.5 MB body limit | Done |
 
-Optional env: `SKIP_EMPTY_FRAMES`, `EMPTY_STDEV_THRESHOLD`, `BURST_GAP_MS`, `DEDUPE_BURST` — see [.env.example](.env.example).
+Optional env: `SKIP_EMPTY_FRAMES`, `EMPTY_STDEV_THRESHOLD`, `BURST_GAP_MS`, `DEDUPE_BURST` — see [.env.example](.env.example). (Google Drive keys are documented under [planned Drive integration](#google-drive-integration-planned); do not set them in production until you decide to ship that feature.)
 
 ### Host on Vercel
 
@@ -227,7 +228,7 @@ Use the same Vercel URL on your phone browser (Chrome or Safari).
 4. Tap **Run Analysis** on the sticky bar at the bottom. Wait for **Analyzing…** to finish (on Vercel this can take a bit for each new batch).
 5. When finished, tap the download icon for the CSV (and check Supabase if configured). If a photo shows **Already done**, it was already in your log/Supabase — it will not be re-analyzed.
 
-Drive access is through the **phone’s picker**, not Google sign-in inside the app. Prefer small batches on Vercel Hobby (~60s limit). If Analyze returns instantly with an error about an **empty** photo, open that file once in Google Drive (so it downloads), then **Choose photos** again. Desktop layout (folder upload + wide table) is unchanged on larger screens.
+Drive access today is through the **phone’s system picker** (or synced folders on desktop), not in-app Google sign-in. In-app **From Google Drive** is [planned — not deployed yet](#google-drive-integration-planned). Prefer small batches on Vercel Hobby (~60s limit). If Analyze returns an **empty** photo error, open that file once in Drive/Files so it downloads, then **Choose photos** again.
 
 ### Host on Railway
 
@@ -335,7 +336,7 @@ npm run dev:clean
 
 ### Usage
 
-1. **Select images** — on desktop: **Upload Folder** uses Chrome’s directory picker (starts in **Downloads**) so you are not stuck in the last trap folder and you avoid Chrome’s repeated “Upload N files… trust this site?” warning (that warning only happens with old folder-input uploads and cannot be turned off). Or use individual files. On phone: **Choose photos** from Google Drive / Files (JPEG, PNG, WebP, HEIC; recommended 50). Tap a row/card to preview.
+1. **Select images** — on desktop: **Upload Folder** uses Chrome’s directory picker (starts in **Downloads**) so you are not stuck in the last trap folder and you avoid Chrome’s repeated “Upload N files… trust this site?” warning. Or use individual files. On phone: **Choose photos** from Google Drive / Files (JPEG, PNG, WebP, HEIC; recommended 50). Tap a row/card to preview. *(In-app Google Drive Picker is [planned](#google-drive-integration-planned).)*
 2. **Optional existing log** — upload a `Camera_Trap_Analysis*.csv` to **append** new rows (header must match spec below).
 3. **Run analysis** — progress per file; **date/time come from the photo’s EXIF** (`DateTimeOriginal` when the trap took the shot), read from the **original** file bytes before any resize. If the image has no EXIF (some phone/Drive exports strip it), the app falls back to the file’s last-modified time (often “today”). Before calling the AI, the server checks your **session CSV** and **Supabase** for the same **Photo Name**. Matches are marked **Already done** (no new AI call, no second database row). Tap **Stop** anytime to halt remaining photos (the one already uploading may finish). After a stop or a full run, **upload more photos** in the same session — new uploads are auto-selected, already-analyzed photos are skipped, and **Analyze N new photo(s)** only processes waiting rows; results append to the session CSV (and Supabase when configured). Use **Clear results & re-analyze all** to wipe session memory; photos still in Supabase remain skipped unless you delete those rows in Table Editor first.
 4. **Download results** — Excel file `CTA_YYYY-MM-DD_HHmmss.xls` (opens in Excel/Sheets). Includes folder fields (**SourceFile**, **Senna Removed/Not Removed**, **Year of removal**, **Trap nights**) when the upload folder name follows the FFS pattern. **Human (armed)** rows are highlighted in **red**. Rows are sorted by **Photo Name** in natural order. Plain CSV: `/api/jobs/[id]/download?format=csv`.
@@ -438,11 +439,43 @@ Project skills live in `.cursor/skills/`. **`sync-readme-on-change`** requires t
 
 ---
 
-## Future: hosted + Google Drive (planned)
+## Google Drive integration (planned)
 
-Hosted app on **Railway** with Google OAuth, Drive folder browse, and Sheets append/create in folder. Spec below.
+**Status:** Feature to be planned / shipped later — **do not treat as live.** Local **Upload Folder** / **Choose photos** remain the supported way to add photos. Decide when to enable this; until then, leave Google `NEXT_PUBLIC_GOOGLE_*` env vars unset in production.
 
-**Status:** Local MVP implemented; Google/Railway integration not started.
+### Intended Option A — in-app Picker + sign-in
+
+When approved for deploy:
+
+1. User clicks **From Google Drive** → Google sign-in (read-only Drive scope).
+2. Google Picker opens → select images and/or a folder (folder = images in that folder only, not deep subfolders).
+3. App downloads up to **~50** images into the same list as local picks (`lastModified` from Drive `modifiedTime`; trap folder name from parent folder when available).
+4. Analyze / CSV / Supabase path stays the same as today’s local flow.
+
+Draft helper code may exist in the repo (`lib/google-drive-picker.ts`). The **From Google Drive** button is **not shown** in the live UI until you decide to wire it up, add GCP keys, and redeploy.
+
+### Setup checklist (when you decide to ship)
+
+1. Create a GCP project; enable **Google Picker API** and **Google Drive API**.
+2. **OAuth consent screen** (Testing with test users is fine to start).
+3. Create **OAuth 2.0 Client ID** → Web application. **Authorized JavaScript origins**: `http://localhost:3000` and `https://YOUR-APP.vercel.app` (no path).
+4. Create an **API key** (HTTP referrer restricted to those origins). Prefer restricting to Picker API.
+5. Copy **Project number** (APIs & Services → Dashboard / Project settings) as App ID.
+6. Set in `.env.local` / Vercel only when ready to go live (all `NEXT_PUBLIC_*` — rebuild/redeploy after change):
+
+```bash
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=.....apps.googleusercontent.com
+NEXT_PUBLIC_GOOGLE_API_KEY=...
+NEXT_PUBLIC_GOOGLE_APP_ID=...   # optional but recommended
+```
+
+**Workaround until then:** If Google Drive for Desktop syncs folders to the computer, **Upload Folder** already works with no Google Cloud setup.
+
+## Future: hosted + Sheets in Drive (planned)
+
+Required Google OAuth for the whole app, plus **Sheets append/create in the Drive folder**. Spec below.
+
+**Status:** Not started. Photo pick from Drive (Option A above) is also not deployed yet.
 
 ---
 
@@ -737,7 +770,9 @@ Rough savings: downscaling 50–80% image tokens; skipping empty frames 30–70%
 
 ### Phase 1 — MVP
 
-- Google sign-in; Drive folder listing; multi-select images
+- [ ] Google Drive integration (Picker + sign-in for photo pick) — **planned; deploy when ready**
+- [ ] Sheets write to Drive folder (append-or-create)
+- Drive folder listing in a dedicated dashboard; multi-select images grid
 - EXIF date/time; LLM analysis; append-or-create Sheet in same folder
 - Job progress UI
 
@@ -802,9 +837,11 @@ Rough savings: downscaling 50–80% image tokens; skipping empty frames 30–70%
 - [x] Local MVP + Path A: HEIC, thumbnails, preview, log library, empty/burst optimizations
 - [x] Optional Supabase persistence for analysis rows (no app auth)
 - [x] Railway deploy files (`railway.toml`, health check)
-- [ ] Document GCP setup (Drive, Sheets, OAuth, redirect URIs)
-- [ ] Google OAuth + Prisma on Railway Postgres
-- [ ] Drive folder browser (thumbnails, multi-select)
+- [ ] Google Drive integration (Picker + sign-in) — planned; ship when team decides (draft checklist in README)
+- [ ] Document GCP setup for Sheets + full OAuth redirect URIs
+- [ ] Google OAuth + Prisma on Railway Postgres (required app login)
+- [ ] Drive Picker multi-select → local analysis list (deploy when ready)
+- [ ] Dedicated Drive folder browser (thumbnails grid)
 - [ ] Google Sheet resolve: append to existing `Camera_Trap_Analysis*` in folder, else create
 - [ ] Railway deploy
 

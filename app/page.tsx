@@ -29,6 +29,7 @@ import {
 } from "@/lib/upload-chunks";
 import { folderNameFromFile } from "@/lib/folder-meta";
 import { pickTrapImageFolder } from "@/lib/pick-folder";
+// Planned (not deployed): Google Drive Picker — see lib/google-drive-picker.ts + README.
 
 /** Soft guidance only — users may add more; uploads are chunked. */
 const RECOMMENDED_FILES = 50;
