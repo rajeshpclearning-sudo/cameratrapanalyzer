@@ -10,9 +10,9 @@ Apply the station classification rules below strictly — they override generic 
 
 When a wildlife animal OR human evidence is visible (including partial bodies, legs, bags at the frame edge):
 - has_animal: true  (ALWAYS true if has_human is true — humans count as presence, not an empty frame)
-- species_common: wildlife name from station rules, OR "Human" when people/body parts/belongings are present
-- individual_count: integer count of distinct animals or people inferred from visible parts
-- individuals_description: same count as a string (e.g. "1")
+- species_common: wildlife name from station rules, OR "Human" when people/body parts/belongings are present. If TWO OR MORE clear species are in the frame, list them all joined with " + " (e.g. "Sambar Deer + Spotted Deer")
+- individual_count: integer count of ALL distinct animals or people in the frame (sum across species)
+- individuals_description: same total count as a string (e.g. "2")
 - behavior: one of foraging, moving, standing, resting, drinking, running, unknown
 
 When TRULY empty (no wildlife AND no person AND no human legs/feet/hands/fingers AND no bag/sandals/gear):
@@ -29,6 +29,7 @@ Other rules:
 - Do not invent rare/exotic species; for clear partial Indian wildlife of any species, do make an intelligent guess.
 - Never use "Partial animal visible at frame edge — species unconfirmed" as species_common.
 - Any clear animal that is only partly in frame (any species) gets a species name — never "No animal detected".
+- Never drop a clear second species: name every identifiable species in the frame (Rule 12).
 - For vague background/secondary shapes only, follow the station verification rules (eye-shine alone is not enough).`;
 
 /** FFS Station C8 rules — edited when accuracy feedback improves identification. */
@@ -227,7 +228,8 @@ export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
               "Analyze this camera-trap image using the FFS Station C8 classification rules. " +
               "Look carefully for wildlife of any species (including partial bodies cut by the frame edge), " +
               "and for people, human legs/feet, fingers/hands, and belongings (bag, sandals). " +
-              "If wildlife or human evidence is present, this is NOT an empty frame — name the species. " +
+              "If wildlife or human evidence is present, this is NOT an empty frame — name every clear species " +
+              "(e.g. Sambar Deer + Spotted Deer when both are visible; count = total animals). " +
               "If a person clearly carries or holds a weapon (gun, rifle, bow, spear, machete, etc.), " +
               "set has_weapon true and species_common to Human (armed). " +
               "Honor any PENDING USER FEEDBACK in the system prompt for similar mistakes.",

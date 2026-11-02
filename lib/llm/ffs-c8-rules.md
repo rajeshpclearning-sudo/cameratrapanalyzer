@@ -36,9 +36,11 @@ If spots/rosettes are clearly visible on a **small** wild cat, classify as Leopa
 
 ## 7. SECONDARY/BACKGROUND ANIMALS — Verify before reporting
 
-Do not report a **secondary** animal in the background unless at least two clear anatomical features are visible (body shape, limbs, head, eye-shine with body outline). Eye-shine alone is insufficient to name a species. If a dark shape is partially visible behind a primary animal, note it as "indistinct shape in background — species unconfirmed".
+Do not invent a **vague** secondary animal from eye-shine alone or an indistinct dark blob. Eye-shine alone is insufficient. If a shape is too unclear to name, you may note "indistinct shape in background — species unconfirmed" in behavior, but that does **not** replace naming clear animals.
 
-**Caution is only for vague background shapes.** If **any** animal (herbivore, carnivore, primate, small mammal, bird, etc.) is a clear **main subject** — including when only part of the body is in frame — you **must** report it with the best Station C8 species name. Do **not** use Rule 7 caution as a reason to output "No animal detected" for a clear animal that is incomplete in the frame.
+**If a second (or third) animal is clearly visible** — body shape, coat pattern, and/or head clear enough to identify — you **must** name it (see Rule 12). Caution is only for vague background shapes, never for a clear Spotted Deer next to a Sambar, or any other clear multi-species scene.
+
+If **any** animal is a clear subject — including when only part of the body is in frame — you **must** report it with the best Station C8 species name. Do **not** use Rule 7 as a reason to output "No animal detected" or to drop a clear second species.
 
 ## 8. EMPTY FRAMES — Report as No Animal only when truly empty
 
@@ -94,3 +96,16 @@ Burst neighbors:
 
 - Do not label Human only because a neighboring file had people.
 - Do not copy a human count from a different photo.
+
+## 12. MULTIPLE SPECIES IN ONE FRAME — Name every clear species
+
+When **two or more different species** are clearly visible in the same photo:
+
+- `species_common` must list **all** clear species, joined with `" + "` (spaces around the plus), using Station C8 names. Example: **"Sambar Deer + Spotted Deer"** (or **"Sambar Deer + Chital"**). Do **not** report only the largest / nearest animal.
+- `individual_count` = **total** distinct animals of all those species combined (e.g. one Sambar + one Spotted Deer → `2`).
+- `individuals_description` = that same total as a string (e.g. `"2"`).
+- Order species roughly by prominence (larger or closer first), then remaining clear species.
+- Same-species groups stay a single name (e.g. three Spotted Deer → species `"Spotted Deer"`, count `3`).
+- Do **not** invent a second species from a vague blur; only add species you can identify.
+
+Canonical miss to avoid: I__00796 — Sambar browsing left and Spotted Deer (Chital) grazing right must be **"Sambar Deer + Spotted Deer"** with count `2`, not Sambar alone.
