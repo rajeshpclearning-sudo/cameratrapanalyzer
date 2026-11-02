@@ -7,7 +7,19 @@ import type { CsvRow, FileJobState } from "@/lib/types";
 
 /** Build a minimal CsvRow with only the speciesName slot populated. */
 function makeRow(speciesName: string): CsvRow {
-  return ["photo.jpg", "2024-01-01", "08:00:00", speciesName, "1", "Foraging", "Success"];
+  return [
+    "photo.jpg",
+    "2024-01-01",
+    "08:00:00",
+    speciesName,
+    "1",
+    "Foraging",
+    "Success",
+    "",
+    "",
+    "",
+    "",
+  ];
 }
 
 /** Build a FileJobState with sensible defaults. */

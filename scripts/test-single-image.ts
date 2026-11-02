@@ -33,6 +33,10 @@ async function main(): Promise<void> {
     analysis.individuals_description,
     analysis.behavior,
     "Success",
+    "",
+    "",
+    "",
+    "",
   ];
 
   const csv = buildCsv([row]);

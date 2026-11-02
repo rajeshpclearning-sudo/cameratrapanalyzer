@@ -101,12 +101,33 @@ async function handlePost(request: Request) {
     }
   }
 
+  /** Optional map of photo_name → trap folder name (SourceFile / Senna / year / nights). */
+  let folderByPhoto: Record<string, string> = {};
+  const folderRaw = formData.get("folderOverrides");
+  if (typeof folderRaw === "string" && folderRaw.trim()) {
+    try {
+      const parsed = JSON.parse(folderRaw) as Record<string, string>;
+      for (const [name, folder] of Object.entries(parsed ?? {})) {
+        if (typeof folder === "string" && folder.trim()) {
+          folderByPhoto[name] = folder.trim();
+        }
+      }
+    } catch {
+      folderByPhoto = {};
+    }
+  }
+  const sharedFolder =
+    typeof formData.get("trapFolderName") === "string"
+      ? String(formData.get("trapFolderName")).trim()
+      : "";
+
   const files: {
     buffer: Buffer;
     name: string;
     mime: string;
     lastModified: number;
     dateOverride?: { date: string; timestamp: string };
+    trapFolderName?: string;
   }[] = [];
 
   for (const entry of fileEntries) {
@@ -144,6 +165,7 @@ async function handlePost(request: Request) {
           ? entry.lastModified
           : Date.now(),
       dateOverride: dateOverrides[name],
+      trapFolderName: folderByPhoto[name] || sharedFolder || undefined,
     });
   }
 

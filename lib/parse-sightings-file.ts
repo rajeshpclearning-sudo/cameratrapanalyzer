@@ -1,6 +1,7 @@
 import "server-only";
 
 import * as XLSX from "xlsx";
+import { normalizeCsvRow } from "./csv-row";
 import { CSV_COL, CSV_HEADER, ROW_STATUS, type CsvRow } from "./types";
 
 const SUPPORTED_EXTENSIONS = [".csv", ".xlsx", ".xls"] as const;
@@ -19,6 +20,13 @@ const HEADER_ALIASES: Record<string, number> = {
   individuals: CSV_COL.individuals,
   behavior: CSV_COL.behavior,
   status: CSV_COL.status,
+  sourcefile: CSV_COL.sourceFile,
+  "source file": CSV_COL.sourceFile,
+  "senna removed/not removed": CSV_COL.sennaStatus,
+  senna: CSV_COL.sennaStatus,
+  "year of removal": CSV_COL.yearOfRemoval,
+  "trap nights": CSV_COL.trapNights,
+  trapnights: CSV_COL.trapNights,
 };
 
 const REQUIRED_COLUMNS = [
@@ -146,11 +154,7 @@ function rowFromMappedCells(
     row[colIndex] = cells[fileColIndex] ?? "";
   });
 
-  if (!row[CSV_COL.status]?.trim()) {
-    row[CSV_COL.status] = ROW_STATUS.success;
-  }
-
-  return row as CsvRow;
+  return normalizeCsvRow(row);
 }
 
 export function rowsFromMatrix(matrix: string[][]): CsvRow[] {

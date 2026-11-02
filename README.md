@@ -338,7 +338,7 @@ npm run dev:clean
 1. **Select images** — on desktop: **Upload Folder** uses Chrome’s directory picker (starts in **Downloads**) so you are not stuck in the last trap folder and you avoid Chrome’s repeated “Upload N files… trust this site?” warning (that warning only happens with old folder-input uploads and cannot be turned off). Or use individual files. On phone: **Choose photos** from Google Drive / Files (JPEG, PNG, WebP, HEIC; recommended 50). Tap a row/card to preview.
 2. **Optional existing log** — upload a `Camera_Trap_Analysis*.csv` to **append** new rows (header must match spec below).
 3. **Run analysis** — progress per file; **date/time come from the photo’s EXIF** (`DateTimeOriginal` when the trap took the shot), read from the **original** file bytes before any resize. If the image has no EXIF (some phone/Drive exports strip it), the app falls back to the file’s last-modified time (often “today”). Before calling the AI, the server checks your **session CSV** and **Supabase** for the same **Photo Name**. Matches are marked **Already done** (no new AI call, no second database row). Tap **Stop** anytime to halt remaining photos (the one already uploading may finish). After a stop or a full run, **upload more photos** in the same session — new uploads are auto-selected, already-analyzed photos are skipped, and **Analyze N new photo(s)** only processes waiting rows; results append to the session CSV (and Supabase when configured). Use **Clear results & re-analyze all** to wipe session memory; photos still in Supabase remain skipped unless you delete those rows in Table Editor first.
-4. **Download results** — Excel file `CTA_YYYY-MM-DD_HHmmss.xls` (opens in Excel/Sheets). **Human (armed)** rows are highlighted in **red**. Session append still uses CSV under the hood. Rows are sorted by **Photo Name** in natural order (e.g. `I__00071` … `I__00120`). Plain CSV remains available at `/api/jobs/[id]/download?format=csv` if needed.
+4. **Download results** — Excel file `CTA_YYYY-MM-DD_HHmmss.xls` (opens in Excel/Sheets). Includes folder fields (**SourceFile**, **Senna Removed/Not Removed**, **Year of removal**, **Trap nights**) when the upload folder name follows the FFS pattern. **Human (armed)** rows are highlighted in **red**. Rows are sorted by **Photo Name** in natural order. Plain CSV: `/api/jobs/[id]/download?format=csv`.
 5. **Optional Supabase** — when configured, each **newly analyzed** row in a finished job is inserted into `camera_trap_sightings` (rows from an uploaded existing CSV or earlier session rows are not re-inserted).
 6. **Import Log** (sidebar) — upload a past analysis file in **Excel** (`.xlsx`, `.xls`) or **CSV** with the same column header as below. Preview rows, then **Import to Supabase**. If this browser imported a file with the **same filename** before, a warning appears and you must click **Import anyway** (tracking is per-browser in localStorage, not across devices). Re-importing still adds duplicate rows to Supabase.
 
@@ -403,11 +403,17 @@ Do **not** use the **publishable** key (`sb_publishable_...`) — that one is fo
 
 ### CSV / Excel columns
 
-`Photo Name,Date,Timestamp,Species Name,Number of Individuals,Behavior,Status`
+`Photo Name,Date,Timestamp,Species Name,Number of Individuals,Behavior,Status,SourceFile,Senna Removed/Not Removed,Year of removal,Trap nights`
 
-- Used for analysis CSV download, optional append log, and **Import Log** (first worksheet row for Excel).
-- **Import** also accepts legacy header names (`Photo name`, `Species`, `# Individuals`, etc.).
+- Used for analysis download, optional append log, and **Import Log** (first worksheet row for Excel).
+- **Import** also accepts legacy header names (`Photo name`, `Species`, `# Individuals`, etc.) and older 7-column files.
 - **Date** format: `18-Feb-2026`. **Timestamp**: `2:39 PM`.
+- **Folder metadata** (from the trap folder name, e.g. `CN_7_FFS_2_23Feb2026_NR_2021_31`):
+  - **SourceFile** — first five underscore parts (`CN_7_FFS_2_23Feb2026`)
+  - **Senna Removed/Not Removed** — `NR` → `Not Removed`, `R` → `Removed` (full words in the sheet)
+  - **Year of removal** — e.g. `2021`
+  - **Trap nights** — e.g. `31`
+  - If the folder name is incomplete, fill whatever parts are present; leave the rest blank.
 - **No animal:** Species Name, Number of Individuals, and Behavior all contain descriptive text about what is seen.
 - **Humans:** Species Name `Human`; appropriate behavior. If a weapon is clearly visible with the person, Species Name `Human (armed)` (dashboard shows these in red).
 - See [Google Sheet output](#google-sheet-output) for full rules (same semantics as future Sheets export).
@@ -467,7 +473,7 @@ Record what animals (or humans) crossed the camera trap by analyzing trap photos
 | Behavior | LLM: `foraging`, `moving`, `standing`, `resting`, `drinking`, `running`, `unknown`, etc. |
 
 **Header row (frozen):**  
-`Photo Name | Date | Timestamp | Species Name | Number of Individuals | Behavior | Status`  
+`Photo Name | Date | Timestamp | Species Name | Number of Individuals | Behavior | Status | SourceFile | Senna Removed/Not Removed | Year of removal | Trap nights`  
 (Same as current CSV export; see [CSV / Excel columns](#csv--excel-columns).)
 
 Optional later columns: `Job ID`, `Analyzed at`, `Confidence`, `Notes`, `Drive file link`.

@@ -1,5 +1,6 @@
 import { isArmedHumanSpecies } from "./burst-species";
 import { sortRowsByPhotoName } from "./csv";
+import { normalizeCsvRow } from "./csv-row";
 import { CSV_HEADER, type CsvRow } from "./types";
 
 function escapeXml(value: string): string {
@@ -85,15 +86,7 @@ export function rowsFromCsvContent(csvText: string): CsvRow[] {
   for (let i = 1; i < lines.length; i++) {
     const fields = parseCsvLine(lines[i]!);
     if (fields.length < 7) continue;
-    rows.push([
-      fields[0] ?? "",
-      fields[1] ?? "",
-      fields[2] ?? "",
-      fields[3] ?? "",
-      fields[4] ?? "",
-      fields[5] ?? "",
-      fields[6] ?? "",
-    ]);
+    rows.push(normalizeCsvRow(fields));
   }
   return rows;
 }

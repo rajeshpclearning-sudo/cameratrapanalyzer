@@ -22,6 +22,12 @@ import {
   groupBurstIndices,
   isLikelyEmptyFrame,
 } from "./preprocess";
+import {
+  buildAnalysisCsvRow,
+  normalizeCsvRow,
+  withTrapFolderFields,
+} from "./csv-row";
+import { parseTrapFolderName } from "./folder-meta";
 import type { CsvRow, FileJobState, LlmAnalysis } from "./types";
 import { CSV_COL, ROW_STATUS } from "./types";
 
@@ -35,6 +41,8 @@ export type BatchFile = {
   lastModified: number;
   /** From client EXIF read before upload shrink (preserves trap taken-at). */
   dateOverride?: { date: string; timestamp: string };
+  /** Trap folder name used to fill SourceFile / Senna / year / trap nights. */
+  trapFolderName?: string;
 };
 
 function llmToRow(
@@ -42,16 +50,18 @@ function llmToRow(
   date: string,
   timestamp: string,
   analysis: LlmAnalysis,
+  folderName?: string | null,
 ): CsvRow {
-  return [
+  return buildAnalysisCsvRow({
     photoName,
     date,
     timestamp,
-    analysis.species_common,
-    analysis.individuals_description,
-    analysis.behavior,
-    ROW_STATUS.success,
-  ];
+    species: analysis.species_common,
+    individuals: analysis.individuals_description,
+    behavior: analysis.behavior,
+    status: ROW_STATUS.success,
+    folderName,
+  });
 }
 
 function copyAnalysisRow(
@@ -59,16 +69,25 @@ function copyAnalysisRow(
   date: string,
   timestamp: string,
   source: CsvRow,
+  folderName?: string | null,
 ): CsvRow {
-  return [
+  const row = buildAnalysisCsvRow({
     photoName,
     date,
     timestamp,
-    source[3],
-    source[4],
-    source[5],
-    source[6] ?? ROW_STATUS.success,
-  ];
+    species: source[CSV_COL.speciesName],
+    individuals: source[CSV_COL.individuals],
+    behavior: source[CSV_COL.behavior],
+    status: source[CSV_COL.status] ?? ROW_STATUS.success,
+    folderName,
+  });
+  if (!folderName?.trim()) {
+    row[CSV_COL.sourceFile] = source[CSV_COL.sourceFile] ?? "";
+    row[CSV_COL.sennaStatus] = source[CSV_COL.sennaStatus] ?? "";
+    row[CSV_COL.yearOfRemoval] = source[CSV_COL.yearOfRemoval] ?? "";
+    row[CSV_COL.trapNights] = source[CSV_COL.trapNights] ?? "";
+  }
+  return row;
 }
 
 function getConcurrency(): number {
@@ -189,7 +208,7 @@ async function processLeader(
     }
 
     if (SKIP_EMPTY && (await isLikelyEmptyFrame(jpeg))) {
-      const row = emptyFrameRow(name, date, timestamp);
+      const row = emptyFrameRow(name, date, timestamp, file.trapFolderName);
       markFile(jobId, index, { name, status: "skipped", row });
       incrementStats(jobId, "emptySkipped");
       return row;
@@ -202,7 +221,13 @@ async function processLeader(
 
     const analysis = await analyzeImage(jpeg);
     incrementStats(jobId, "llmCalls");
-    const row = llmToRow(name, date, timestamp, analysis);
+    const row = llmToRow(
+      name,
+      date,
+      timestamp,
+      analysis,
+      file.trapFolderName,
+    );
     markFile(jobId, index, { name, status: "done", row });
     return row;
   } catch (err) {
@@ -236,7 +261,13 @@ async function processFollower(
       file.dateOverride,
     );
     const jpeg = await decodeToJpeg(file.buffer);
-    const row = copyAnalysisRow(file.name, date, timestamp, leaderRow);
+    const row = copyAnalysisRow(
+      file.name,
+      date,
+      timestamp,
+      leaderRow,
+      file.trapFolderName,
+    );
     markFile(jobId, index, { name: file.name, status: "done", row });
     incrementStats(jobId, "burstCopied");
     return row;
@@ -457,14 +488,19 @@ export async function runBatch(input: BatchInput): Promise<void> {
       const name = files[i]!.name;
       const prior = alreadyKnown.get(name.trim()) ?? alreadyKnown.get(name);
       if (prior) {
+        let row = normalizeCsvRow(prior);
+        const folder = files[i]!.trapFolderName;
+        if (folder?.trim() && !row[CSV_COL.sourceFile]?.trim()) {
+          row = withTrapFolderFields(row, parseTrapFolderName(folder));
+        }
         markFile(jobId, i, {
           name,
           status: "already_done",
-          row: prior,
+          row,
         });
         incrementStats(jobId, "alreadyAnalyzed");
         if (!fromCsv.has(name.trim())) {
-          reusedRows.push(prior);
+          reusedRows.push(row);
           fromCsv.add(name.trim());
         }
         continue;

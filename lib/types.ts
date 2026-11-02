@@ -6,6 +6,10 @@ export const CSV_HEADER = [
   "Number of Individuals",
   "Behavior",
   "Status",
+  "SourceFile",
+  "Senna Removed/Not Removed",
+  "Year of removal",
+  "Trap nights",
 ] as const;
 
 /** Column indices for CsvRow tuples */
@@ -17,16 +21,24 @@ export const CSV_COL = {
   individuals: 4,
   behavior: 5,
   status: 6,
+  sourceFile: 7,
+  sennaStatus: 8,
+  yearOfRemoval: 9,
+  trapNights: 10,
 } as const;
 
 export type CsvRow = [
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
+  string, // photoName
+  string, // date
+  string, // timestamp
+  string, // speciesName
+  string, // individuals
+  string, // behavior
+  string, // status
+  string, // sourceFile
+  string, // sennaStatus
+  string, // yearOfRemoval
+  string, // trapNights
 ];
 
 export const ROW_STATUS = {

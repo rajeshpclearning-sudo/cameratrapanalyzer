@@ -27,6 +27,7 @@ import {
   prepareUploadFile,
   type PreparedUpload,
 } from "@/lib/upload-chunks";
+import { folderNameFromFile } from "@/lib/folder-meta";
 import { pickTrapImageFolder } from "@/lib/pick-folder";
 
 /** Soft guidance only — users may add more; uploads are chunked. */
@@ -41,6 +42,8 @@ type LocalFile = {
   id: string;
   file: File;
   selected: boolean;
+  /** Trap folder name for SourceFile / Senna / year / trap nights columns. */
+  trapFolder?: string;
 };
 
 type PreviewState = {
@@ -140,8 +143,12 @@ export default function Home() {
     };
   }, [localFiles]);
 
-  const addFiles = useCallback((incoming: FileList | File[]) => {
+  const addFiles = useCallback((
+    incoming: FileList | File[],
+    trapFolder?: string,
+  ) => {
     const list = Array.from(incoming).filter(isImageFile);
+    const sharedFolder = trapFolder?.trim() || "";
 
     setLocalFiles((prev) => {
       const seen = new Set(prev.map((p) => `${p.file.name}-${p.file.size}`));
@@ -154,6 +161,8 @@ export default function Home() {
           id: crypto.randomUUID(),
           file,
           selected: true,
+          trapFolder:
+            sharedFolder || folderNameFromFile(file) || undefined,
         });
       }
       let merged = [...prev, ...added];
@@ -215,7 +224,7 @@ export default function Home() {
         );
         return;
       }
-      addFiles(result.files);
+      addFiles(result.files, result.folderName);
       return;
     }
     if (result.cancelled) return;
@@ -464,8 +473,9 @@ export default function Home() {
     let prepared: PreparedUpload[];
     try {
       prepared = [];
-      for (const { file } of selected) {
+      for (const item of selected) {
         if (stopRequestedRef.current) break;
+        const { file } = item;
         // Re-read bytes before upload (iOS/Drive pickers can hand empty or stale File handles).
         const buffer = await file.arrayBuffer();
         if (buffer.byteLength === 0) {
@@ -512,6 +522,12 @@ export default function Home() {
     }
 
     const chunks = packUploadChunks(prepared);
+    const folderByPhoto: Record<string, string> = {};
+    for (const item of selected) {
+      if (item.trapFolder?.trim()) {
+        folderByPhoto[item.file.name] = item.trapFolder.trim();
+      }
+    }
 
     let csvForNext: { content: string; filename: string } | null = sessionCsv
       ? { ...sessionCsv }
@@ -577,6 +593,16 @@ export default function Home() {
           "exifOverrides",
           JSON.stringify(buildExifOverridesPayload(chunk)),
         );
+        if (Object.keys(folderByPhoto).length > 0) {
+          const chunkFolders: Record<string, string> = {};
+          for (const item of chunk) {
+            const folder = folderByPhoto[item.originalName];
+            if (folder) chunkFolders[item.originalName] = folder;
+          }
+          if (Object.keys(chunkFolders).length > 0) {
+            form.append("folderOverrides", JSON.stringify(chunkFolders));
+          }
+        }
 
         if (i === 0 && existingCsvFile) {
           form.append("existingCsv", existingCsvFile);

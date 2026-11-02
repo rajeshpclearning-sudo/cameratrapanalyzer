@@ -23,6 +23,10 @@ function recordToCsvRow(record: SightingRow): CsvRow {
     record.individual_count?.trim() || "0",
     record.behavior,
     record.status?.trim() || ROW_STATUS.success,
+    "",
+    "",
+    "",
+    "",
   ];
 }
 
