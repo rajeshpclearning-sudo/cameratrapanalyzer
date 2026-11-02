@@ -1,7 +1,7 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import OpenAI from "openai";
+import { loadPendingFeedbackForPrompt } from "../feedback-store";
 import type { LlmAnalysis } from "../types";
+import { loadStationRulesMarkdown } from "./load-rules";
 
 const BASE_SYSTEM_PROMPT = `You analyze forest camera-trap photographs from India (FFS Station C8, Wayanad, Kerala).
 Return JSON only. Use common English species names in species_common (scientific names may appear in the station rules for reference only — do not put them in JSON fields).
@@ -30,26 +30,24 @@ Other rules:
 - Never use "Partial animal visible at frame edge — species unconfirmed" as species_common.
 - For background/secondary animals, follow the station verification rules (eye-shine alone is not enough).`;
 
-let cachedStationRules: string | null = null;
-
 /** FFS Station C8 rules — edited when accuracy feedback improves identification. */
 export function loadStationClassificationRules(): string {
-  if (cachedStationRules != null) return cachedStationRules;
-  const path = join(process.cwd(), "lib/llm/ffs-c8-rules.md");
-  try {
-    cachedStationRules = readFileSync(path, "utf8").trim();
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.warn("[llm] could not load ffs-c8-rules.md:", message);
-    cachedStationRules = "";
-  }
-  return cachedStationRules;
+  return loadStationRulesMarkdown();
 }
 
-function buildSystemPrompt(): string {
+async function buildSystemPrompt(): Promise<string> {
   const rules = loadStationClassificationRules();
-  if (!rules) return BASE_SYSTEM_PROMPT;
-  return `${BASE_SYSTEM_PROMPT}\n\n---\nSTATION CLASSIFICATION RULES (mandatory):\n\n${rules}`;
+  const pending = await loadPendingFeedbackForPrompt();
+  const parts = [BASE_SYSTEM_PROMPT];
+  if (rules) {
+    parts.push(
+      `---\nSTATION CLASSIFICATION RULES (mandatory):\n\n${rules}`,
+    );
+  }
+  if (pending) {
+    parts.push(`---\n${pending}`);
+  }
+  return parts.join("\n\n");
 }
 
 const responseSchema = {
@@ -214,10 +212,11 @@ export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
   const base64 = jpegBuffer.toString("base64");
   const openai = getClient();
 
+  const systemPrompt = await buildSystemPrompt();
   const response = await openai.chat.completions.create({
     model: getModel(),
     messages: [
-      { role: "system", content: buildSystemPrompt() },
+      { role: "system", content: systemPrompt },
       {
         role: "user",
         content: [
@@ -228,7 +227,8 @@ export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
               "Look carefully for people, human legs/feet, fingers/hands, and belongings (bag, sandals). " +
               "If any of those are present, this is NOT an empty frame — use Human. " +
               "If a person clearly carries or holds a weapon (gun, rifle, bow, spear, machete, etc.), " +
-              "set has_weapon true and species_common to Human (armed).",
+              "set has_weapon true and species_common to Human (armed). " +
+              "Honor any PENDING USER FEEDBACK in the system prompt for similar mistakes.",
           },
           {
             type: "image_url",

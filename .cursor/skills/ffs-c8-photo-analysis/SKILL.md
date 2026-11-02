@@ -30,18 +30,20 @@ When changing classification behavior for the live app, **edit that rules file**
 
 ## Accuracy feedback loop (mandatory)
 
-When the user reports an accuracy issue for a photo analysis:
+Feedback arrives from chat **or** from WildEye preview (**Mark error / add feedback** → `POST /api/feedback`). Pending feedback is injected into the next vision call immediately. Permanent rule-book text still lives in git.
+
+When consolidating feedback into the rule book:
 
 1. **Read** [`lib/llm/ffs-c8-rules.md`](../../../lib/llm/ffs-c8-rules.md) and this skill.
 2. **Update the rules** in `lib/llm/ffs-c8-rules.md` so the next analysis avoids the same mistake (tighten the relevant section; do not delete unrelated rules).
-3. **Append** a short entry under [Corrections log](#corrections-log) in this file:
+3. **Append** a short entry under [Corrections log](#corrections-log) in this file **and** the same row at the top of [`lib/llm/ffs-c8-corrections-log.md`](../../../lib/llm/ffs-c8-corrections-log.md) (shown in the app under **Species Rules**):
    - Date (ISO)
    - What was wrong
    - What rule/text was changed
 4. **Commit and push to GitHub** on `main` (or the active branch) so Vercel redeploys with the improved rules:
-   - Stage: `lib/llm/ffs-c8-rules.md`, this `SKILL.md`, and any related code
+   - Stage: `lib/llm/ffs-c8-rules.md`, `lib/llm/ffs-c8-corrections-log.md`, this `SKILL.md`, and any related code
    - Commit message focuses on why (e.g. `Tighten C8 rules: prefer Stripe-necked Mongoose over Brown Mongoose`)
-   - `git push` so production picks up the change
+   - `git push` so production picks up the change — the in-app Species Rules page updates after deploy
 5. Follow [sync-readme-on-change](../sync-readme-on-change/SKILL.md) if README species/prompt docs need a one-line update.
 
 Do this in the **same turn** as the fix — do not wait for the user to ask for a commit when the change is an accuracy correction to these rules.
@@ -68,6 +70,7 @@ Append newest entries at the top.
 
 | Date | Issue | Rule change |
 |------|--------|-------------|
+| 2026-11-02 | In-app Species Rules + preview error feedback | Species Rules page reads `ffs-c8-rules.md` + `ffs-c8-corrections-log.md`; preview Mark error → feedback store → next analysis prompt; commit updates rule book UI |
 | 2026-10-24 | Highlight humans with weapons in red on dashboard | Rule 10 weapons subsection; `has_weapon` in vision JSON; species **Human (armed)**; UI red row/badge |
 | 2026-10-24 | I__00134 still empty despite person+bag+legs | Fix normalize bug (has_human with has_animal false was forced to empty); vision detail high; Rule 10 requires has_animal true with has_human; legs+bag called out |
 | 2026-10-24 | I__00134 bag+sandals labeled empty; I__00142 three fingers on camera not reported | Rule 10 expanded: human belongings and body parts (fingers/hand) → Human (count 1 if only parts/gear); never "no human or animal visible" |

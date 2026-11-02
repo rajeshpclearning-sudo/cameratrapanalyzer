@@ -5,6 +5,7 @@ import { FileListTable } from "@/app/components/FileListTable";
 import { ImportLogView } from "@/app/components/ImportLogView";
 import { LogLibraryView } from "@/app/components/LogLibraryView";
 import { PreviewModal } from "@/app/components/PreviewModal";
+import { RuleBookView } from "@/app/components/RuleBookView";
 import {
   canStoreCsv,
   saveJobHistory,
@@ -34,7 +35,7 @@ const POLL_MS = 800;
 const ACCEPT =
   "image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif";
 
-type View = "analysis" | "library" | "import";
+type View = "analysis" | "library" | "import" | "rules";
 
 type LocalFile = {
   id: string;
@@ -960,19 +961,25 @@ export default function Home() {
       ? "Session"
       : view === "library"
         ? "Library"
-        : "Import";
+        : view === "rules"
+          ? "Rules"
+          : "Import";
   const headerPrefixDesktop =
     view === "analysis"
       ? "Camera Trap Session /"
       : view === "library"
         ? "Log Library /"
-        : "Import Log /";
+        : view === "rules"
+          ? "Species Rules /"
+          : "Import Log /";
   const headerTitle =
     view === "analysis"
       ? sessionLabel
       : view === "library"
         ? "Saved runs"
-        : "Past analysis";
+        : view === "rules"
+          ? "Station C8"
+          : "Past analysis";
 
   return (
     <>
@@ -1027,10 +1034,10 @@ export default function Home() {
             <Icon name="cloud_upload" />
             <span className="text-label-md">Import Log</span>
           </button>
-          <span className="flex cursor-not-allowed items-center space-x-sm rounded-xl px-sm py-3 text-on-surface-variant opacity-50">
+          <button type="button" onClick={() => goToView("rules")} className={navClass(view === "rules")}>
             <Icon name="menu_book" />
-            <span className="text-label-md">Species Guide</span>
-          </span>
+            <span className="text-label-md">Species Rules</span>
+          </button>
           <span className="flex cursor-not-allowed items-center space-x-sm rounded-xl px-sm py-3 text-on-surface-variant opacity-50">
             <Icon name="map" />
             <span className="text-label-md">Field Map</span>
@@ -1178,6 +1185,8 @@ export default function Home() {
           />
         ) : view === "import" ? (
           <ImportLogView />
+        ) : view === "rules" ? (
+          <RuleBookView />
         ) : (
           <>
             {error && (

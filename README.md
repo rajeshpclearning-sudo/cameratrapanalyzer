@@ -41,6 +41,7 @@ Use this section to design screens in [Stitch](https://stitch.withgoogle.com). I
 |--------|--------|---------|
 | **Home / Analyze** | Built (local MVP) | Single scrollable page: pick files, optional CSV, run job, progress, download |
 | **Import Log** | Built | Upload past analysis (.xlsx, .xls, .csv) directly to Supabase — no photos required |
+| **Species Rules** | Built | Consolidated FFS Station C8 wild-animal rules + corrections log; pending preview feedback |
 | **Log Library** | Built | Browser localStorage history of past analysis runs (up to 30) |
 | **Sign in** | Planned | Google OAuth; explain Drive + Sheets permissions |
 | **Dashboard / Select from Drive** | Planned | Paste or browse folder ID; grid of images with checkboxes and thumbnails |
@@ -89,6 +90,7 @@ flowchart TD
 |------|---------|------------|
 | **Sidebar brand** | Forest First + product | Large circular **Forest First** logo (`public/ffs-logo.png`, circle-only / no black box); title **WildEye Analyzer** |
 | **Sidebar Help** | Onboarding + contact | **Help** expands to: Quick Help guide (PDF) and **Email Forest First** (`mailto:forestfirst.ai@gmail.com`) |
+| **Species Rules** | Rule book | Under Import Log: full Station C8 rules, git corrections log, and pending preview feedback |
 | **Header** | Session context | Sticky top bar: session / filename, running status, **Stop** when analyzing |
 | **Global error** | Validation / API errors | Banner (red border); e.g. over recommended file count, missing API key, HEIC rejected |
 | **Section 1 — Select images** | Ingest | Section card; labels “Folder” and “Or individual files”; native file inputs; hint text (formats, recommended 50); toolbar: Select all, Deselect all, Remove selected; scrollable **file list** (checkbox + filename); counter “N of M selected” |
@@ -600,6 +602,8 @@ Use JSON schema / structured output (OpenAI `json_schema` or Gemini JSON mode).
 - **Partial / edge-of-frame animals** (e.g. most of an elephant leaving the shot): make an intelligent species guess and count — do not label as empty or “partial unconfirmed”.
 - **Humans:** classify per frame only (burst dedupe does not copy Human or empty labels to neighbors). Count people in that photo; also treat clear **belongings** (bag, sandals) and **body parts** (fingers/hand at camera) as Human — not empty.
 - **Armed humans:** if a person clearly carries a weapon, species is **Human (armed)** and that row is highlighted **in red** on the analysis dashboard, in the photo preview, and in the downloaded `.xls` spreadsheet (plain CSV cannot store colors).
+- **Species Rules** (sidebar, under Import Log): reads [`lib/llm/ffs-c8-rules.md`](lib/llm/ffs-c8-rules.md) and [`lib/llm/ffs-c8-corrections-log.md`](lib/llm/ffs-c8-corrections-log.md). When rules are tightened and **committed to GitHub**, the page updates on the next deploy.
+- **Preview feedback:** open a photo → **Mark error / add feedback**. Comments are stored (`POST /api/feedback`) and injected into the **next** vision analysis. Optional Supabase table `analysis_feedback` (see `supabase/schema.sql`) keeps feedback across serverless restarts.
 - Count **visible** individuals only (including animals inferred from a clear partial body).
 - Behavior enum: `foraging`, `moving`, `standing`, `resting`, `drinking`, `running`, `unknown`, `N/A`.
 - **Do not** ask the LLM for date or time — use EXIF and Drive metadata only.
@@ -706,6 +710,8 @@ Rough savings: downscaling 50–80% image tokens; skipping empty frames 30–70%
 │   ├── exif.ts
 │   ├── llm/analyze.ts
 │   ├── llm/ffs-c8-rules.md       # FFS Station C8 species rules (every vision call)
+│   ├── llm/ffs-c8-corrections-log.md  # Corrections shown in Species Rules UI
+│   ├── feedback-store.ts         # Preview error feedback → next analysis
 │   ├── upload-chunks.ts          # Split large uploads under Vercel 4.5 MB body limit
 │   ├── supabase.ts               # Optional Supabase client (server)
 │   ├── persist-sightings.ts      # Insert analysis rows after jobs

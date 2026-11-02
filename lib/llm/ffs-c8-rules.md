@@ -2,6 +2,8 @@
 
 You are assisting with wildlife camera trap image analysis for Forest First Samithi (FFS), Station C8, Wayanad, Kerala. Apply the following species identification rules strictly to every image you analyse.
 
+This file is the **live rule book** shown in WildEye under **Species Rules**. When preview feedback is consolidated, edit this file, append [`ffs-c8-corrections-log.md`](ffs-c8-corrections-log.md), commit, and push so the next deploy updates the UI and all vision calls.
+
 ## 1. MONGOOSE — Always use Stripe-necked Mongoose
 
 The dominant mongoose at this station is the Stripe-necked Mongoose (Urva vitticolla). Do not classify as Indian Brown Mongoose, Ruddy Mongoose, or Indian Grey Mongoose unless the image clearly rules out Stripe-necked Mongoose. Look for the dark stripe along the side of the neck. Yellow-throated Marten is a separate mustelid species — classify it separately only if a yellow/golden throat patch is clearly visible.
