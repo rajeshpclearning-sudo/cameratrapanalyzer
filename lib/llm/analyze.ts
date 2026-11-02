@@ -30,6 +30,7 @@ Other rules:
 - Never use "Partial animal visible at frame edge — species unconfirmed" as species_common.
 - Any clear animal that is only partly in frame (any species) gets a species name — never "No animal detected".
 - Never drop a clear second species: name every identifiable species in the frame (Rule 12).
+- Wild Boar piglets (often striped, snout not trunk, small vs grass) are Wild Boar — never Elephant.
 - For vague background/secondary shapes only, follow the station verification rules (eye-shine alone is not enough).`;
 
 /** FFS Station C8 rules — edited when accuracy feedback improves identification. */
@@ -230,6 +231,7 @@ export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
               "and for people, human legs/feet, fingers/hands, and belongings (bag, sandals). " +
               "If wildlife or human evidence is present, this is NOT an empty frame — name every clear species " +
               "(e.g. Sambar Deer + Spotted Deer when both are visible; count = total animals). " +
+              "Do not call striped wild boar piglets Elephant — use Wild Boar. " +
               "If a person clearly carries or holds a weapon (gun, rifle, bow, spear, machete, etc.), " +
               "set has_weapon true and species_common to Human (armed). " +
               "Honor any PENDING USER FEEDBACK in the system prompt for similar mistakes.",

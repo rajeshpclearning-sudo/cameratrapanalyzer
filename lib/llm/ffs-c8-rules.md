@@ -50,18 +50,19 @@ A frame with any clearly visible animal tissue (even incomplete / cut by the edg
 
 ## 9. PARTIAL / EDGE-OF-FRAME ANIMALS — Make an intelligent species guess (all species)
 
-If any animal tissue is clearly visible at the frame edge or mostly leaving/entering the frame — for **any** species (elephant, tiger, deer, gaur, wild pig, civet, mongoose, primate, etc.) — treat this as **an animal present**, not an empty frame. Examples: three-quarters of a body; a trunk or rump; legs, ear, or tail; head and forequarters with the rear cut off.
+If any animal tissue is clearly visible at the frame edge or mostly leaving/entering the frame — for **any** species (elephant, tiger, deer, gaur, wild boar, civet, mongoose, primate, etc.) — treat this as **an animal present**, not an empty frame. Examples: three-quarters of a body; a trunk or rump; legs, ear, or tail; head and forequarters with the rear cut off.
 
 - Set `has_animal` true.
 - Put your **best species guess** in `species_common` using Station C8 naming for whatever animal matches the visible parts (even if the head, rear, or limbs are cut off).
 - Set `individual_count` / `individuals_description` to the number of distinct animals you can reasonably infer from the visible parts (usually `1` for one partial body).
 - Prefer a confident common name over "No animal detected" or "Partial animal visible at frame edge — species unconfirmed".
 - Only use "Unidentified" when the visible fragment is too small or ambiguous to support any species guess (e.g. a tiny blur with no shape). Do **not** use the old phrase "Partial animal visible at frame edge — species unconfirmed" as `species_common`.
-- This rule is **species-agnostic**: never reserve partial-body handling for one taxon only. A cut-off elephant, tiger, sambar, or any other clear animal must get a species label, not an empty-frame label.
+- This rule is **species-agnostic**: never reserve partial-body handling for one taxon only. A cut-off elephant, tiger, sambar, wild boar, or any other clear animal must get a species label, not an empty-frame label.
+- **Do not default to Elephant** just because a body is grey/brown or partially cut off — check snout vs trunk, size vs vegetation, and coat (see Rule 13).
 - Illustrative cases (same rule for all animals):
-  - Elephant walking out of frame — label **Elephant** (count 1) when the visible bulk matches.
+  - Elephant walking out of frame — label **Elephant** (count 1) when the visible bulk matches an elephant (trunk/pillar legs/huge scale).
   - Tiger entering with hindquarters cut off (e.g. I__00359) — label **Tiger** (count 1).
-  - Same idea for deer, gaur, pig, civet, and every other Station C8 species.
+  - Same idea for deer, gaur, wild boar, civet, and every other Station C8 species.
 
 ## 10. HUMANS — Judge each frame on its own; do not invent or miss people
 
@@ -109,3 +110,21 @@ When **two or more different species** are clearly visible in the same photo:
 - Do **not** invent a second species from a vague blur; only add species you can identify.
 
 Canonical miss to avoid: I__00796 — Sambar browsing left and Spotted Deer (Chital) grazing right must be **"Sambar Deer + Spotted Deer"** with count `2`, not Sambar alone.
+
+## 13. WILD BOAR vs ELEPHANT — Do not confuse piglets with elephants
+
+**Wild Boar** (Wild Pig, Sus scrofa): use species_common **"Wild Boar"**.
+
+- Long **snout** (not a trunk), pointed upright ears, thin legs, coarse hair.
+- Juveniles / piglets often have clear **horizontal light stripes** on a brown coat — this pattern is diagnostic of wild boar young, **never** of elephants.
+- Body size is small-to-medium relative to grass, saplings, and undergrowth; a sounder may include several small animals plus an adult.
+
+**Elephant** (Asian Elephant): use **"Elephant"** only when the animal is clearly a large elephant — pillar-like legs, massive body dwarfing nearby vegetation, and ideally a **trunk** and/or large ears. Adult/juvenile elephants do **not** have horizontal body stripes like boar piglets.
+
+**Hard rules:**
+
+- Striped small ungulate-like mammals in grass = **Wild Boar**, not Elephant.
+- Multiple small similar animals at ground level with pig-like heads = Wild Boar (count all visible individuals).
+- Never label wild boar piglets as Elephant because they are grey-brown, dusty, or partially obscured.
+
+Canonical miss to avoid: I__00046 — several small striped wild boars (and adult) must be **"Wild Boar"** with the correct headcount, **not** Elephant.

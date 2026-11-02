@@ -64,6 +64,7 @@ Full text lives in `lib/llm/ffs-c8-rules.md`. Apply strictly:
 10. **Humans** — per-frame only; include body parts (fingers) and belongings (bag/sandals); correct count; never invent or miss people across burst neighbors.
 11. **Armed humans** — if a person clearly carries/holds a weapon, `has_weapon` true and species **Human (armed)** (dashboard shows these rows in red).
 12. **Multiple species** — list every clear species in `species_common` joined with ` + `; `individual_count` = total animals.
+13. **Wild Boar vs Elephant** — striped/small piglets with snouts are Wild Boar; never Elephant.
 
 ## Corrections log
 
@@ -71,6 +72,7 @@ Append newest entries at the top.
 
 | Date | Issue | Rule change |
 |------|--------|-------------|
+| 2026-11-02 | I__00046 wild boar piglets labeled Elephant | New Rule 13: Wild Boar vs Elephant (stripes, snout, scale); Rule 9 must not default to Elephant |
 | 2026-11-02 | I__00796 Sambar + Spotted Deer; only Sambar reported | New Rule 12: multi-species frames use "A + B"; count = total; Rule 7 must not drop clear second species |
 | 2026-11-02 | Partial-animal rule must apply to all species, not only Tiger | Rules 7–9 + prompt generalized: any clear partial wildlife → species name, never empty |
 | 2026-11-02 | I__00359 partial Tiger labeled No animal | Rule 6 adds Tiger; Rule 7 caution only for vague backgrounds; Rule 9 + prompt: partial striped Tiger → Tiger, never empty |
