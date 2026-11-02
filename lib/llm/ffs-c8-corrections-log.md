@@ -5,6 +5,7 @@ When accuracy feedback is consolidated into `ffs-c8-rules.md` and committed to G
 
 | Date | Issue | Rule change |
 |------|--------|-------------|
+| 2026-11-02 | Partial-body rule for all animals (not Tiger-only) | Rules 7–9 + prompt: any clear partial wildlife of any species → best species name, never empty |
 | 2026-11-02 | I__00359: clear partial Tiger called No animal | Rule 6 Tiger naming; Rule 7 not blocking clear carnivores; Rule 9 + vision prompt: partial Tiger with stripes → Tiger |
 | 2026-11-02 | In-app Species Rules + preview error feedback | Species Rules page + pending feedback in next analysis; corrections log updates on every rules git commit |
 | 2026-10-24 | Highlight humans with weapons in red on dashboard | Rule 10 weapons subsection; `has_weapon` in vision JSON; species **Human (armed)**; UI red row/badge |

@@ -38,26 +38,28 @@ If spots/rosettes are clearly visible on a **small** wild cat, classify as Leopa
 
 Do not report a **secondary** animal in the background unless at least two clear anatomical features are visible (body shape, limbs, head, eye-shine with body outline). Eye-shine alone is insufficient to name a species. If a dark shape is partially visible behind a primary animal, note it as "indistinct shape in background — species unconfirmed".
 
-**Caution is only for vague background shapes.** If a large carnivore (Tiger, Leopard, Sloth Bear, Dhole, etc.) is the **main subject** and is clearly visible — including when only part of the body is in frame — you **must** report it with the best species name. Do **not** use Rule 7 caution as a reason to output "No animal detected" for a clear partial tiger or other clear large mammal.
+**Caution is only for vague background shapes.** If **any** animal (herbivore, carnivore, primate, small mammal, bird, etc.) is a clear **main subject** — including when only part of the body is in frame — you **must** report it with the best Station C8 species name. Do **not** use Rule 7 caution as a reason to output "No animal detected" for a clear animal that is incomplete in the frame.
 
 ## 8. EMPTY FRAMES — Report as No Animal only when truly empty
 
 If **no** animal body part is visible anywhere in the frame (including arboreal zones and background), classify as "No animal detected". Do not interpret shadows, vegetation, or branches as animals.
 
-A frame with a clearly striped large cat (even incomplete) is **not** empty.
+A frame with any clearly visible animal tissue (even incomplete / cut by the edge) is **not** empty — apply Rule 9.
 
-## 9. PARTIAL / EDGE-OF-FRAME ANIMALS — Make an intelligent species guess
+## 9. PARTIAL / EDGE-OF-FRAME ANIMALS — Make an intelligent species guess (all species)
 
-If any animal tissue is clearly visible at the frame edge or mostly leaving/entering the frame (for example three-quarters of a body, a trunk, a large grey rump, legs, ear, or tail of a large mammal; **or a tiger’s head/forequarters with stripes while the hindquarters are cut off**), treat this as **an animal present**, not an empty frame.
+If any animal tissue is clearly visible at the frame edge or mostly leaving/entering the frame — for **any** species (elephant, tiger, deer, gaur, wild pig, civet, mongoose, primate, etc.) — treat this as **an animal present**, not an empty frame. Examples: three-quarters of a body; a trunk or rump; legs, ear, or tail; head and forequarters with the rear cut off.
 
 - Set `has_animal` true.
-- Put your **best species guess** in `species_common` using Station C8 naming (e.g. "Elephant" when size, colour, and body shape match an Asian elephant even if the head is cut off; **"Tiger"** when orange coat + black stripes are clear even if the rear is out of frame).
-- Set `individual_count` / `individuals_description` to the number of distinct animals you can reasonably infer from the visible parts (usually `1` for one partial body leaving the frame).
+- Put your **best species guess** in `species_common` using Station C8 naming for whatever animal matches the visible parts (even if the head, rear, or limbs are cut off).
+- Set `individual_count` / `individuals_description` to the number of distinct animals you can reasonably infer from the visible parts (usually `1` for one partial body).
 - Prefer a confident common name over "No animal detected" or "Partial animal visible at frame edge — species unconfirmed".
 - Only use "Unidentified" when the visible fragment is too small or ambiguous to support any species guess (e.g. a tiny blur with no shape). Do **not** use the old phrase "Partial animal visible at frame edge — species unconfirmed" as `species_common`.
-- Typical cases:
-  - Consecutive trap shots of the same elephant walking out of frame — each partial frame should still be labeled **Elephant** (count 1) when the visible bulk matches an elephant.
-  - Night flash photo of a tiger entering from the left with hindquarters cut off (e.g. I__00359) — label **Tiger** (count 1), never "No animal detected".
+- This rule is **species-agnostic**: never reserve partial-body handling for one taxon only. A cut-off elephant, tiger, sambar, or any other clear animal must get a species label, not an empty-frame label.
+- Illustrative cases (same rule for all animals):
+  - Elephant walking out of frame — label **Elephant** (count 1) when the visible bulk matches.
+  - Tiger entering with hindquarters cut off (e.g. I__00359) — label **Tiger** (count 1).
+  - Same idea for deer, gaur, pig, civet, and every other Station C8 species.
 
 ## 10. HUMANS — Judge each frame on its own; do not invent or miss people
 
