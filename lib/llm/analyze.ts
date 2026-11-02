@@ -26,9 +26,10 @@ When TRULY empty (no wildlife AND no person AND no human legs/feet/hands/fingers
 Other rules:
 - Humans (this frame only): If you see a person, legs/feet, fingers/hand, bag, sandals, shoes, or backpack → has_human true, has_animal true, species_common "Human", count people (use 1 if only legs+bag or only fingers). NEVER output empty / "no human or animal visible" for those frames. Never invent humans from neighboring burst photos.
 - Weapons: If a human clearly holds/carries a gun, rifle, firearm, bow, spear, machete, or similar weapon → has_weapon true and species_common "Human (armed)". Otherwise has_weapon false.
-- Do not invent rare/exotic species; for clear partial Indian wildlife (elephant, deer, etc.), do make an intelligent guess.
+- Do not invent rare/exotic species; for clear partial Indian wildlife (elephant, tiger, deer, etc.), do make an intelligent guess.
 - Never use "Partial animal visible at frame edge — species unconfirmed" as species_common.
-- For background/secondary animals, follow the station verification rules (eye-shine alone is not enough).`;
+- A clear partial Tiger (stripes visible, body cut by frame edge) is Tiger — never "No animal detected".
+- For vague background/secondary shapes only, follow the station verification rules (eye-shine alone is not enough).`;
 
 /** FFS Station C8 rules — edited when accuracy feedback improves identification. */
 export function loadStationClassificationRules(): string {
@@ -224,8 +225,9 @@ export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
             type: "text",
             text:
               "Analyze this camera-trap image using the FFS Station C8 classification rules. " +
-              "Look carefully for people, human legs/feet, fingers/hands, and belongings (bag, sandals). " +
-              "If any of those are present, this is NOT an empty frame — use Human. " +
+              "Look carefully for wildlife (including partial bodies at the frame edge — e.g. Tiger with stripes), " +
+              "and for people, human legs/feet, fingers/hands, and belongings (bag, sandals). " +
+              "If wildlife or human evidence is present, this is NOT an empty frame. " +
               "If a person clearly carries or holds a weapon (gun, rifle, bow, spear, machete, etc.), " +
               "set has_weapon true and species_common to Human (armed). " +
               "Honor any PENDING USER FEEDBACK in the system prompt for similar mistakes.",

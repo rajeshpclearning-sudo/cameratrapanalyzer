@@ -24,28 +24,40 @@ White-tailed Deer is a North American species not found in India. Never use this
 
 Classify grey langurs at this station as "South-Eastern Langur" — not "Grey Langur". Use "Bonnet Macaque" for macaques. Only use "Grey Langur / Bonnet Macaque" when genuinely uncertain between the two.
 
-## 6. WILD CATS — Distinguish Jungle Cat from Leopard Cat
+## 6. WILD CATS — Distinguish Tiger, Leopard Cat, and Jungle Cat
 
-Leopard Cat (Prionailurus bengalensis): smaller, with clear rosette spots on a lighter background. Jungle Cat (Felis chaus): larger, plain sandy/tawny coat, long-legged, minimal markings, black-tipped tail. If spots/rosettes are clearly visible, classify as Leopard Cat. If the coat is plain and the animal is larger, classify as Jungle Cat. Use "Small wild cat (Jungle Cat / Leopard Cat)" only when genuinely unclear.
+**Tiger** (Bengal Tiger / Tiger): large felid; orange/rufous coat with bold **black stripes** (not small rosettes). Use species_common **"Tiger"** when stripes + large cat body/head/legs are clear — even if the rear of the body is cut off by the frame edge. Do **not** call a tiger "Leopard Cat", "Jungle Cat", or "No animal detected".
+
+**Leopard Cat** (Prionailurus bengalensis): much smaller, with clear **rosette** spots on a lighter background (not long tiger stripes).
+
+**Jungle Cat** (Felis chaus): larger than Leopard Cat but far smaller than Tiger; plain sandy/tawny coat, long-legged, minimal markings, black-tipped tail.
+
+If spots/rosettes are clearly visible on a **small** wild cat, classify as Leopard Cat. If the coat is plain and mid-sized, classify as Jungle Cat. Use "Small wild cat (Jungle Cat / Leopard Cat)" only when genuinely unclear between those two — never as a substitute for an obvious Tiger.
 
 ## 7. SECONDARY/BACKGROUND ANIMALS — Verify before reporting
 
-Do not report a secondary animal in the background unless at least two clear anatomical features are visible (body shape, limbs, head, eye-shine with body outline). Eye-shine alone is insufficient to name a species. If a dark shape is partially visible behind a primary animal, note it as "indistinct shape in background — species unconfirmed". Apply extra caution before reporting Sloth Bear, Dhole, or large carnivores — these require clear visible features for confirmation.
+Do not report a **secondary** animal in the background unless at least two clear anatomical features are visible (body shape, limbs, head, eye-shine with body outline). Eye-shine alone is insufficient to name a species. If a dark shape is partially visible behind a primary animal, note it as "indistinct shape in background — species unconfirmed".
+
+**Caution is only for vague background shapes.** If a large carnivore (Tiger, Leopard, Sloth Bear, Dhole, etc.) is the **main subject** and is clearly visible — including when only part of the body is in frame — you **must** report it with the best species name. Do **not** use Rule 7 caution as a reason to output "No animal detected" for a clear partial tiger or other clear large mammal.
 
 ## 8. EMPTY FRAMES — Report as No Animal only when truly empty
 
 If **no** animal body part is visible anywhere in the frame (including arboreal zones and background), classify as "No animal detected". Do not interpret shadows, vegetation, or branches as animals.
 
+A frame with a clearly striped large cat (even incomplete) is **not** empty.
+
 ## 9. PARTIAL / EDGE-OF-FRAME ANIMALS — Make an intelligent species guess
 
-If any animal tissue is clearly visible at the frame edge or mostly leaving/entering the frame (for example three-quarters of a body, a trunk, a large grey rump, legs, ear, or tail of a large mammal), treat this as **an animal present**, not an empty frame.
+If any animal tissue is clearly visible at the frame edge or mostly leaving/entering the frame (for example three-quarters of a body, a trunk, a large grey rump, legs, ear, or tail of a large mammal; **or a tiger’s head/forequarters with stripes while the hindquarters are cut off**), treat this as **an animal present**, not an empty frame.
 
 - Set `has_animal` true.
-- Put your **best species guess** in `species_common` using Station C8 naming (e.g. "Elephant" when size, colour, and body shape match an Asian elephant even if the head is cut off).
+- Put your **best species guess** in `species_common` using Station C8 naming (e.g. "Elephant" when size, colour, and body shape match an Asian elephant even if the head is cut off; **"Tiger"** when orange coat + black stripes are clear even if the rear is out of frame).
 - Set `individual_count` / `individuals_description` to the number of distinct animals you can reasonably infer from the visible parts (usually `1` for one partial body leaving the frame).
 - Prefer a confident common name over "No animal detected" or "Partial animal visible at frame edge — species unconfirmed".
 - Only use "Unidentified" when the visible fragment is too small or ambiguous to support any species guess (e.g. a tiny blur with no shape). Do **not** use the old phrase "Partial animal visible at frame edge — species unconfirmed" as `species_common`.
-- Typical case: consecutive trap shots of the same elephant walking out of frame — each partial frame should still be labeled **Elephant** (count 1) when the visible bulk matches an elephant.
+- Typical cases:
+  - Consecutive trap shots of the same elephant walking out of frame — each partial frame should still be labeled **Elephant** (count 1) when the visible bulk matches an elephant.
+  - Night flash photo of a tiger entering from the left with hindquarters cut off (e.g. I__00359) — label **Tiger** (count 1), never "No animal detected".
 
 ## 10. HUMANS — Judge each frame on its own; do not invent or miss people
 

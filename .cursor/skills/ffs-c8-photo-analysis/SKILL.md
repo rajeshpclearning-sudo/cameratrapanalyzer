@@ -57,10 +57,10 @@ Full text lives in `lib/llm/ffs-c8-rules.md`. Apply strictly:
 3. **Indian Chevrotain** — hooves + mouse-deer shape; do not call cat/civet.
 4. **Deer** — never White-tailed Deer; use Spotted Deer/Chital, Sambar, Indian Muntjac.
 5. **Primates** — "South-Eastern Langur"; "Bonnet Macaque"; uncertain only when genuinely unclear.
-6. **Wild cats** — Leopard Cat (rosettes) vs Jungle Cat (plain tawny).
-7. **Background animals** — need ≥2 anatomical features; eye-shine alone is not enough.
+6. **Wild cats** — Tiger (large, black stripes); Leopard Cat (small, rosettes); Jungle Cat (plain tawny).
+7. **Background animals** — need ≥2 anatomical features for vague secondary shapes only; clear main-subject carnivores (incl. partial Tiger) must be reported.
 8. **Empty frames** — "No animal detected" only when truly empty.
-9. **Partial / edge-of-frame** — intelligent species guess + count (not "No animal" / not unconfirmed partial phrase).
+9. **Partial / edge-of-frame** — intelligent species guess + count (not "No animal"); includes partial Tiger.
 10. **Humans** — per-frame only; include body parts (fingers) and belongings (bag/sandals); correct count; never invent or miss people across burst neighbors.
 11. **Armed humans** — if a person clearly carries/holds a weapon, `has_weapon` true and species **Human (armed)** (dashboard shows these rows in red).
 
@@ -70,6 +70,7 @@ Append newest entries at the top.
 
 | Date | Issue | Rule change |
 |------|--------|-------------|
+| 2026-11-02 | I__00359 partial Tiger labeled No animal | Rule 6 adds Tiger; Rule 7 caution only for vague backgrounds; Rule 9 + prompt: partial striped Tiger → Tiger, never empty |
 | 2026-11-02 | In-app Species Rules + preview error feedback | Species Rules page reads `ffs-c8-rules.md` + `ffs-c8-corrections-log.md`; preview Mark error → feedback store → next analysis prompt; commit updates rule book UI |
 | 2026-10-24 | Highlight humans with weapons in red on dashboard | Rule 10 weapons subsection; `has_weapon` in vision JSON; species **Human (armed)**; UI red row/badge |
 | 2026-10-24 | I__00134 still empty despite person+bag+legs | Fix normalize bug (has_human with has_animal false was forced to empty); vision detail high; Rule 10 requires has_animal true with has_human; legs+bag called out |
