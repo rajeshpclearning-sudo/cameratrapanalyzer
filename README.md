@@ -258,7 +258,7 @@ Drive access is through the **phone’s picker**, not Google sign-in inside the 
 
    Optional: `LLM_CONCURRENCY=2`, `SKIP_EMPTY_FRAMES=true`, `BURST_GAP_MS=2000`
 4. **Settings** → **Networking** → **Generate domain** (e.g. `*.up.railway.app`).
-5. Open the public URL — health check: `https://YOUR-DOMAIN/api/health`
+5. Open the public URL — health check: `https://YOUR-DOMAIN/api/health` (includes `llmModel`, e.g. `google/gemini-2.5-flash-lite`, plus Supabase status)
 
 #### Service shows “Online” but you don’t see a website
 

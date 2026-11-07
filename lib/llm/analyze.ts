@@ -130,12 +130,36 @@ function getClient(): OpenAI {
   return client;
 }
 
-function getModel(): string {
+/** Resolved vision model id (from LLM_MODEL or provider default). */
+export function getModel(): string {
   const model = envTrim("LLM_MODEL");
   if (model) return model;
   const key = envTrim("OPENAI_API_KEY");
   if (key.startsWith("sk-or-")) return "openai/gpt-4o-mini";
   return "gpt-4o-mini";
+}
+
+/** Safe provider hint for health checks (no secrets). */
+export function getLlmProviderHint(): {
+  apiKeyConfigured: boolean;
+  baseUrlHost: string | null;
+} {
+  const key = envTrim("OPENAI_API_KEY");
+  const baseURL = resolveBaseUrl(key);
+  let baseUrlHost: string | null = null;
+  if (baseURL) {
+    try {
+      baseUrlHost = new URL(baseURL).host;
+    } catch {
+      baseUrlHost = null;
+    }
+  } else if (key && !key.startsWith("sk-or-")) {
+    baseUrlHost = "api.openai.com";
+  }
+  return {
+    apiKeyConfigured: Boolean(key),
+    baseUrlHost,
+  };
 }
 
 function normalizeNoAnimalAnalysis(parsed: LlmAnalysis): LlmAnalysis {
