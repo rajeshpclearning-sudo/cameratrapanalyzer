@@ -32,8 +32,9 @@ Use this section to design screens in [Stitch](https://stitch.withgoogle.com). I
 1. **Ingest** — Many trap images at once (folder or multi-select).
 2. **Analyze** — Vision AI per image (server-side); date/time from photo metadata, not from AI.
 3. **Export** — Tabular log with fixed columns; **append** to existing log when one already exists.
-4. *(Planned)* **Sign-in** — Google OAuth; no anonymous access in production.
-5. *(Planned)* **Google Drive / Sheets** — Browse a Drive folder of trap images; append results to a Google Sheet in that folder (create sheet if none exists).
+4. **OneDrive photo pick (optional)** — **From OneDrive** with Microsoft sign-in (saved in the browser and reused for later folder picks). Requires Azure app client ID in env.
+5. *(Planned)* **App-wide Google / Microsoft gate** — Require sign-in before use in production.
+6. *(Planned)* **Sheets in Drive** — Append analysis rows to a Google Sheet in a Drive folder.
 
 ### Screen map
 
@@ -43,8 +44,9 @@ Use this section to design screens in [Stitch](https://stitch.withgoogle.com). I
 | **Import Log** | Built | Upload past analysis (.xlsx, .xls, .csv) directly to Supabase — no photos required |
 | **Species Rules** | Built | Consolidated FFS Station C8 wild-animal rules + corrections log; pending preview feedback |
 | **Log Library** | Built | Browser localStorage history of past analysis runs (up to 30) |
-| **Sign in** | Planned | Google OAuth; explain Drive + Sheets permissions |
-| **Dashboard / Select from Drive** | Planned | Paste or browse folder ID; grid of images with checkboxes and thumbnails |
+| **Sign in** | Partial | Optional Microsoft sign-in for **From OneDrive** (browser-cached). Full app gate still planned. |
+| **Dashboard / Select from Drive** | Planned | Google Drive browse still planned |
+| **From OneDrive** | Built (env-gated) | Browse OneDrive folders/photos after Microsoft login; downloads join the local file list |
 | **Output target** | Planned | Show resolved Sheet (append vs new); optional override picker |
 | **Job progress** | Partial (section on Home today) | Per-file status; overall progress; errors; link to Sheet or download |
 | **Job complete / Summary** | Partial | Download CSV or “Open in Google Sheets”; filename used; error list |
@@ -335,7 +337,7 @@ npm run dev:clean
 
 ### Usage
 
-1. **Select images** — on desktop: **Upload Folder** uses Chrome’s directory picker (starts in **Downloads**) so you are not stuck in the last trap folder and you avoid Chrome’s repeated “Upload N files… trust this site?” warning (that warning only happens with old folder-input uploads and cannot be turned off). Or use individual files. On phone: **Choose photos** from Google Drive / Files (JPEG, PNG, WebP, HEIC; recommended 50). Tap a row/card to preview.
+1. **Select images** — on desktop: **Upload Folder**, **Individual Files**, or **From OneDrive** (Microsoft sign-in; requires Azure client ID). On phone: **Choose photos** and/or **From OneDrive**. JPEG, PNG, WebP, HEIC; recommended 50. Tap a row/card to preview.
 2. **Optional existing log** — upload a `Camera_Trap_Analysis*.csv` to **append** new rows (header must match spec below).
 3. **Run analysis** — progress per file; **date/time come from the photo’s EXIF** (`DateTimeOriginal` when the trap took the shot), read from the **original** file bytes before any resize. If the image has no EXIF (some phone/Drive exports strip it), the app falls back to the file’s last-modified time (often “today”). Before calling the AI, the server checks your **session CSV** and **Supabase** for the same **Photo Name**. Matches are marked **Already done** (no new AI call, no second database row). Tap **Stop** anytime to halt remaining photos (the one already uploading may finish). After a stop or a full run, **upload more photos** in the same session — new uploads are auto-selected, already-analyzed photos are skipped, and **Analyze N new photo(s)** only processes waiting rows; results append to the session CSV (and Supabase when configured). Use **Clear results & re-analyze all** to wipe session memory; photos still in Supabase remain skipped unless you delete those rows in Table Editor first.
 4. **Download results** — Excel file `CTA_YYYY-MM-DD_HHmmss.xls` (opens in Excel/Sheets). Includes folder fields (**SourceFile**, **Senna Removed/Not Removed**, **Year of removal**, **Trap nights**) when the upload folder name follows the FFS pattern. **Human (armed)** rows are highlighted in **red**. Rows are sorted by **Photo Name** in natural order. Plain CSV: `/api/jobs/[id]/download?format=csv`.
@@ -438,11 +440,37 @@ Project skills live in `.cursor/skills/`. **`sync-readme-on-change`** requires t
 
 ---
 
+## OneDrive photo pick (built — optional)
+
+Local **Upload Folder** / **Choose photos** stay as they are. **From OneDrive**:
+
+1. User clicks **From OneDrive** → Microsoft sign-in (first time only in that browser).
+2. Browse folders, select photos and/or a folder → WildEye downloads images into the analysis list.
+3. Later picks in the **same browser** reuse the saved Microsoft session (no password again). Use **Sign out** in the picker when finished on a shared PC.
+4. Analyze / CSV / Supabase path is unchanged. Trap folder name still fills Excel SourceFile / Senna / year / trap nights when present.
+
+**Do not** put a user’s OneDrive password in `.env`. Only the app registration client ID belongs there.
+
+### Azure setup (required to test)
+
+1. [Azure Portal](https://portal.azure.com) → **Microsoft Entra ID** → **App registrations** → **New registration**.
+2. Supported account types: **Accounts in any organizational directory and personal Microsoft accounts**.
+3. Platform: **Single-page application** — redirect URIs: `http://localhost:3000` and `https://YOUR-APP.vercel.app`.
+4. **API permissions** → Microsoft Graph **delegated**: `User.Read`, `Files.Read`, `Files.Read.All` (grant admin consent if your org requires it).
+5. Copy **Application (client) ID** into `.env.local` and Vercel env, then redeploy:
+
+```bash
+NEXT_PUBLIC_AZURE_CLIENT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+NEXT_PUBLIC_AZURE_TENANT_ID=common
+```
+
+Without `NEXT_PUBLIC_AZURE_CLIENT_ID`, the button explains that OneDrive is not configured yet.
+
 ## Future: hosted + Google Drive (planned)
 
 Hosted app on **Railway** with Google OAuth, Drive folder browse, and Sheets append/create in folder. Spec below.
 
-**Status:** Local MVP implemented; Google/Railway integration not started.
+**Status:** Local MVP + optional OneDrive pick implemented; Google Drive / Sheets-in-folder not started.
 
 ---
 
@@ -802,6 +830,7 @@ Rough savings: downscaling 50–80% image tokens; skipping empty frames 30–70%
 - [x] Local MVP + Path A: HEIC, thumbnails, preview, log library, empty/burst optimizations
 - [x] Optional Supabase persistence for analysis rows (no app auth)
 - [x] Railway deploy files (`railway.toml`, health check)
+- [x] Optional OneDrive pick (MSAL + Graph browse; browser-cached Microsoft login)
 - [ ] Document GCP setup (Drive, Sheets, OAuth, redirect URIs)
 - [ ] Google OAuth + Prisma on Railway Postgres
 - [ ] Drive folder browser (thumbnails, multi-select)

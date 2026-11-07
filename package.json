@@ -13,6 +13,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@azure/msal-browser": "^5.29.0",
     "@supabase/supabase-js": "^2.107.0",
     "autoprefixer": "^10.4.20",
     "exifr": "^7.1.3",

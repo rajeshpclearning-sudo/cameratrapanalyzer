@@ -6,6 +6,7 @@ import { ImportLogView } from "@/app/components/ImportLogView";
 import { LogLibraryView } from "@/app/components/LogLibraryView";
 import { PreviewModal } from "@/app/components/PreviewModal";
 import { RuleBookView } from "@/app/components/RuleBookView";
+import { OneDrivePickerModal } from "@/app/components/OneDrivePickerModal";
 import {
   canStoreCsv,
   saveJobHistory,
@@ -28,8 +29,9 @@ import {
   type PreparedUpload,
 } from "@/lib/upload-chunks";
 import { folderNameFromFile } from "@/lib/folder-meta";
+import { isOneDriveConfigured } from "@/lib/onedrive";
+import type { OneDrivePickedFile } from "@/lib/onedrive";
 import { pickTrapImageFolder } from "@/lib/pick-folder";
-// Planned (not deployed): Google Drive Picker — see lib/google-drive-picker.ts + README.
 
 /** Soft guidance only — users may add more; uploads are chunked. */
 const RECOMMENDED_FILES = 50;
@@ -102,6 +104,7 @@ export default function Home() {
     total: number;
   } | null>(null);
   const [stopping, setStopping] = useState(false);
+  const [oneDriveOpen, setOneDriveOpen] = useState(false);
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const [completedByName, setCompletedByName] = useState<
     Record<string, FileJobState>
@@ -232,6 +235,45 @@ export default function Home() {
     // Safari / older browsers: multi-file picker only (not webkitdirectory —
     // that always shows Chrome's trust warning and cannot be suppressed).
     filesInputRef.current?.click();
+  };
+
+  const onOneDrivePicked = (picked: OneDrivePickedFile[]) => {
+    if (picked.length === 0) {
+      setError("No images came back from OneDrive.");
+      return;
+    }
+    const byFolder = new Map<string, File[]>();
+    const noFolder: File[] = [];
+    for (const item of picked) {
+      const folder = item.trapFolder?.trim();
+      if (folder) {
+        const list = byFolder.get(folder) ?? [];
+        list.push(item.file);
+        byFolder.set(folder, list);
+      } else {
+        noFolder.push(item.file);
+      }
+    }
+    for (const [folder, files] of byFolder) {
+      addFiles(files, folder);
+    }
+    if (noFolder.length > 0) addFiles(noFolder);
+    if (picked.length > RECOMMENDED_FILES) {
+      setError(
+        `${picked.length} photos added from OneDrive (recommended ${RECOMMENDED_FILES}). Larger sets still work; they upload in smaller batches.`,
+      );
+    }
+  };
+
+  const openOneDrive = () => {
+    if (!isOneDriveConfigured()) {
+      setError(
+        "OneDrive is not set up yet. Add NEXT_PUBLIC_AZURE_CLIENT_ID in .env.local and Vercel (see README), then redeploy.",
+      );
+      return;
+    }
+    setError(null);
+    setOneDriveOpen(true);
   };
 
   const toggleFile = (id: string) => {
@@ -1258,8 +1300,8 @@ export default function Home() {
                 <input ref={filesInputRef} type="file" accept={ACCEPT} multiple hidden data-ui-file-input className="hidden" onChange={onFilesChange} />
                 <input ref={csvInputRef} type="file" accept=".csv,text/csv" hidden data-ui-file-input className="hidden" onChange={(e) => setExistingCsv(e.target.files?.[0] ?? null)} />
 
-                {/* Phone-first: single Choose photos CTA (Drive / Files via system picker) */}
-                <div className="md:hidden">
+                {/* Phone-first: local picker + OneDrive */}
+                <div className="space-y-md md:hidden">
                   <button
                     type="button"
                     onClick={() => filesInputRef.current?.click()}
@@ -1268,13 +1310,24 @@ export default function Home() {
                     <Icon name="add_photo_alternate" className="mb-sm text-5xl text-primary" />
                     <span className="text-headline-sm font-semibold">Choose photos</span>
                     <span className="mt-xs max-w-xs text-center text-label-md text-on-surface-variant">
-                      Open Google Drive or Files in the picker, then select images (recommended {RECOMMENDED_FILES})
+                      From this phone (Files / synced cloud). Recommended {RECOMMENDED_FILES}.
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={openOneDrive}
+                    className="group flex w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-outline-variant bg-surface-container-low px-md py-6 transition-colors active:border-primary"
+                  >
+                    <Icon name="cloud" className="mb-sm text-4xl text-on-surface-variant" />
+                    <span className="text-headline-sm font-semibold">From OneDrive</span>
+                    <span className="mt-xs max-w-xs text-center text-label-md text-on-surface-variant">
+                      Sign in once with Microsoft — reused for later folder picks
                     </span>
                   </button>
                 </div>
 
-                {/* Desktop: folder + individual files */}
-                <div className="hidden grid-cols-1 gap-md md:grid md:grid-cols-2">
+                {/* Desktop: folder + individual files + OneDrive */}
+                <div className="hidden grid-cols-1 gap-md md:grid md:grid-cols-3">
                   <button type="button" onClick={() => void openFolderPicker()} className="group flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-outline-variant bg-surface-container-low p-lg transition-colors hover:border-primary">
                     <Icon name="folder_zip" className="mb-sm text-4xl text-on-surface-variant group-hover:text-primary" />
                     <span className="text-headline-sm font-semibold">Upload Folder</span>
@@ -1285,9 +1338,27 @@ export default function Home() {
                   <button type="button" onClick={() => filesInputRef.current?.click()} className="group flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-outline-variant bg-surface-container-low p-lg transition-colors hover:border-primary">
                     <Icon name="upload_file" className="mb-sm text-4xl text-on-surface-variant group-hover:text-primary" />
                     <span className="text-headline-sm font-semibold">Individual Files</span>
-                    <span className="mt-xs text-label-md text-on-surface-variant">JPEG, PNG, WebP, HEIC (recommended {RECOMMENDED_FILES})</span>
+                    <span className="mt-xs text-center text-label-md text-on-surface-variant">JPEG, PNG, WebP, HEIC (recommended {RECOMMENDED_FILES})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={openOneDrive}
+                    className="group flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-outline-variant bg-surface-container-low p-lg transition-colors hover:border-primary"
+                  >
+                    <Icon name="cloud" className="mb-sm text-4xl text-on-surface-variant group-hover:text-primary" />
+                    <span className="text-headline-sm font-semibold">From OneDrive</span>
+                    <span className="mt-xs text-center text-label-md text-on-surface-variant">
+                      Microsoft sign-in once, then pick folders (recommended {RECOMMENDED_FILES})
+                    </span>
                   </button>
                 </div>
+
+                <OneDrivePickerModal
+                  open={oneDriveOpen}
+                  onClose={() => setOneDriveOpen(false)}
+                  onPicked={onOneDrivePicked}
+                  recommendedMax={RECOMMENDED_FILES}
+                />
 
                 <div className="max-h-[min(60vh,520px)] overflow-y-auto md:max-h-[520px]">
                   <FileListTable
