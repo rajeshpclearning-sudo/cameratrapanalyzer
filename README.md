@@ -337,7 +337,7 @@ npm run dev:clean
 
 ### Usage
 
-1. **Select images** — on desktop: **Upload Folder**, **Individual Files**, or **From OneDrive** (Microsoft sign-in; requires Azure client ID). On phone: **Choose photos** and/or **From OneDrive**. JPEG, PNG, WebP, HEIC; recommended 50. Tap a row/card to preview.
+1. **Select images** — on desktop: **Upload local folder**, **Individual local files**, or **From OneDrive** (Microsoft sign-in; requires Azure client ID). On phone: **Choose photos** and/or **From OneDrive**. JPEG, PNG, WebP, HEIC; recommended 50. Tap a row/card to preview.
 2. **Optional existing log** — upload a `Camera_Trap_Analysis*.csv` to **append** new rows (header must match spec below).
 3. **Run analysis** — progress per file; **date/time come from the photo’s EXIF** (`DateTimeOriginal` when the trap took the shot), read from the **original** file bytes before any resize. If the image has no EXIF (some phone/Drive exports strip it), the app falls back to the file’s last-modified time (often “today”). Before calling the AI, the server checks your **session CSV** and **Supabase** for the same **Photo Name**. Matches are marked **Already done** (no new AI call, no second database row). Tap **Stop** anytime to halt remaining photos (the one already uploading may finish). After a stop or a full run, **upload more photos** in the same session — new uploads are auto-selected, already-analyzed photos are skipped, and **Analyze N new photo(s)** only processes waiting rows; results append to the session CSV (and Supabase when configured). Use **Clear results & re-analyze all** to wipe session memory; photos still in Supabase remain skipped unless you delete those rows in Table Editor first.
 4. **Download results** — Excel file `CTA_YYYY-MM-DD_HHmmss.xls` (opens in Excel/Sheets). Includes folder fields (**SourceFile**, **Senna Removed/Not Removed**, **Year of removal**, **Trap nights**) when the upload folder name follows the FFS pattern. **Human (armed)** rows are highlighted in **red**. Rows are sorted by **Photo Name** in natural order. Plain CSV: `/api/jobs/[id]/download?format=csv`.
@@ -442,7 +442,7 @@ Project skills live in `.cursor/skills/`. **`sync-readme-on-change`** requires t
 
 ## OneDrive photo pick (built — optional)
 
-Local **Upload Folder** / **Choose photos** stay as they are. **From OneDrive**:
+Local **Upload local folder** / **Choose photos** stay as they are. **From OneDrive**:
 
 1. User clicks **From OneDrive** → Microsoft sign-in (first time only in that browser).
 2. Browse folders, select photos and/or a folder → WildEye downloads images into the analysis list.

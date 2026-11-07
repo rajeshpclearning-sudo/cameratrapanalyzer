@@ -1330,14 +1330,14 @@ export default function Home() {
                 <div className="hidden grid-cols-1 gap-md md:grid md:grid-cols-3">
                   <button type="button" onClick={() => void openFolderPicker()} className="group flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-outline-variant bg-surface-container-low p-lg transition-colors hover:border-primary">
                     <Icon name="folder_zip" className="mb-sm text-4xl text-on-surface-variant group-hover:text-primary" />
-                    <span className="text-headline-sm font-semibold">Upload Folder</span>
+                    <span className="text-headline-sm font-semibold">Upload local folder</span>
                     <span className="mt-xs text-center text-label-md text-on-surface-variant">
                       Starts in Downloads — pick your trap folder (no repeated trust popup)
                     </span>
                   </button>
                   <button type="button" onClick={() => filesInputRef.current?.click()} className="group flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-outline-variant bg-surface-container-low p-lg transition-colors hover:border-primary">
                     <Icon name="upload_file" className="mb-sm text-4xl text-on-surface-variant group-hover:text-primary" />
-                    <span className="text-headline-sm font-semibold">Individual Files</span>
+                    <span className="text-headline-sm font-semibold">Individual local files</span>
                     <span className="mt-xs text-center text-label-md text-on-surface-variant">JPEG, PNG, WebP, HEIC (recommended {RECOMMENDED_FILES})</span>
                   </button>
                   <button
