@@ -82,6 +82,17 @@ Verified examples: `test-fixtures/golden/indian-hare/` (e.g. I__00037, I__00046,
 
 White-tailed Deer is a North American species not found in India. Never use this classification. Use: **"Spotted Deer"** (not "Chital") for spotted deer; **"Sambar Deer"** for large dark deer with sweeping antlers; **"Indian Muntjac"** for small solitary deer without visible spots.
 
+### Indian Muntjac (Barking Deer)
+
+Verified examples: `test-fixtures/golden/indian-muntjac/` (e.g. I__00028, I__00029, I__00034, I__00043, I__00044, I__00046, I__00058, I__00146, I__00146_1, I__00427, I__00428, I__00429, Indian_Muntjac).
+
+**Indian Muntjac**: small compact deer with **uniform reddish-brown / chestnut coat** (adults usually **unspotted** on the flanks). Often solitary. Characteristic **dark V-shaped bony ridges** on the forehead (pedicles); males may show short simple antlers on those pedicles. Rounded hunched back; slender legs; short tail often with a **white underside** flash. Head commonly lowered while foraging on leaf litter.
+
+- Use species_common **"Indian Muntjac"** (not "Barking Deer", "Muntjac", or "Deer").
+- Do **not** confuse with **Indian Chevrotain** (chevrotain is much tinier, with white flank spots/stripes).
+- Do **not** confuse with **Spotted Deer** (Spotted Deer has clear white body spots) or **Sambar Deer** (much larger, darker, heavy build).
+- Do **not** confuse with **Indian Hare** (hares have long upright ears and hop; no hoofed deer legs or facial pedicle ridges).
+
 ## 5. PRIMATES — Use South-Eastern Langur
 
 Classify grey langurs at this station as "South-Eastern Langur" — not "Grey Langur". Use "Bonnet Macaque" for macaques. Only use "Grey Langur / Bonnet Macaque" when genuinely uncertain between the two.

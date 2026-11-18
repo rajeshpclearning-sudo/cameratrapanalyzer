@@ -57,7 +57,7 @@ Full text lives in `lib/llm/ffs-c8-rules.md`. Canonical name list: [`lib/species
 2. **Civet** — "Small Indian Civet" / "Common Palm Civet" only (no Large Indian Civet). Palm civet: long dark tail ≈ body, back stripes + flank spots (see `test-fixtures/golden/common-palm-civet/`).
 3. **Indian Chevrotain** — tiny, white flank spots/stripes, spindly hooves (`test-fixtures/golden/indian-chevrotain/`); not muntjac/cat/civet.
 3b. **Indian Hare** — long upright ears, lagomorph (`test-fixtures/golden/indian-hare/`); not chevrotain.
-4. **Deer** — never White-tailed Deer; use Spotted Deer, Sambar Deer, Indian Muntjac (not Chital).
+4. **Deer** — never White-tailed Deer; use Spotted Deer, Sambar Deer, Indian Muntjac (not Chital). Muntjac: reddish unspotted coat + dark forehead ridges (`test-fixtures/golden/indian-muntjac/`); not chevrotain/hare.
 5. **Primates** — "South-Eastern Langur"; "Bonnet Macaque".
 6. **Wild cats** — Tiger; Common Leopard; Leopard Cat; plain mid-size cat not on list → Unidentified.
 7. **Background animals** — need ≥2 anatomical features for vague secondary shapes only; any clear main-subject animal (partial or full) must be reported.
@@ -74,6 +74,7 @@ Append newest entries at the top.
 
 | Date | Issue | Rule change |
 |------|--------|-------------|
+| 2026-11-18 | Indian Muntjac verified photo set | Rule 4 + golden fixtures; reddish coat + forehead ridges; not chevrotain/Spotted Deer |
 | 2026-11-18 | Indian Hare verified photo set | Rule 3b + golden fixtures; long ears; not chevrotain |
 | 2026-11-18 | Indian Chevrotain verified photo set | Rule 3 + golden fixtures; flank white spots/stripes + hooves |
 | 2026-11-18 | Grey Mongoose verified photo set | Rule 1 + golden fixtures; no neck stripe → Grey Mongoose |
