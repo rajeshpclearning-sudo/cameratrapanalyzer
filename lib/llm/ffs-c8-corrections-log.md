@@ -5,6 +5,7 @@ When accuracy feedback is consolidated into `ffs-c8-rules.md` and committed to G
 
 | Date | Issue | Rule change |
 |------|--------|-------------|
+| 2026-11-18 | Verified Indian Hare photo set (11 images) | New Rule 3b + golden refs in `test-fixtures/golden/indian-hare/`; long ears / lagomorph; not chevrotain |
 | 2026-11-18 | Verified Indian Chevrotain photo set (10 images) | Rule 3 expanded with golden refs in `test-fixtures/golden/indian-chevrotain/`; white flank spots/stripes + hooves; not muntjac/cat/civet |
 | 2026-11-18 | Verified Grey Mongoose photo set (8 images) | Rule 1 expanded with golden refs in `test-fixtures/golden/grey-mongoose/`; no neck stripe → Grey Mongoose, not Stripe-necked |
 | 2026-11-18 | Verified Common Palm Civet photo set (10 images) | Rule 2 expanded with field traits + golden refs in `test-fixtures/golden/common-palm-civet/`; do not confuse with mongoose/Jackal/Large Indian Civet |

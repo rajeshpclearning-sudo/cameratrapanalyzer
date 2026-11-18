@@ -68,6 +68,16 @@ Verified examples: `test-fixtures/golden/indian-chevrotain/` (e.g. I__00034, I__
 - Do **not** call it **Indian Muntjac** — muntjac is larger, usually unspotted on the flanks as adults, and lacks this dense white flank stripe/spot pattern.
 - If a small spotted animal at night clearly has **hooves** (not paws) and flank white spots/stripes, default to **Indian Chevrotain**.
 
+## 3b. INDIAN HARE — Long ears; not chevrotain or mongoose
+
+Verified examples: `test-fixtures/golden/indian-hare/` (e.g. I__00037, I__00046, I__00047, I__00072, I__00073, I__00092, I__00184, I__00223, I__00272, I__00274, I__00288).
+
+**Indian Hare** (Black-naped Hare): lagomorph with **long upright ears** (often dark-tipped), crouched or hopping body, powerful hind legs, short fluffy tail (often pale underneath), grizzled brown/grey-buff coat. A **darker patch on the nape** (back of neck) is often visible. Night eyeshine common; may sit, crouch, or leap on leaf litter.
+
+- Use species_common **"Indian Hare"** (not "Rabbit", "Hare", or "Black-naped Hare" in the output).
+- Do **not** confuse with **Indian Chevrotain** (chevrotain has short ears, hoofed spindly legs, and white flank spots/stripes — hares do not).
+- Do **not** call it mongoose, civet, or cat — long ears + lagomorph shape are decisive.
+
 ## 4. DEER — Do not use White-tailed Deer
 
 White-tailed Deer is a North American species not found in India. Never use this classification. Use: **"Spotted Deer"** (not "Chital") for spotted deer; **"Sambar Deer"** for large dark deer with sweeping antlers; **"Indian Muntjac"** for small solitary deer without visible spots.
