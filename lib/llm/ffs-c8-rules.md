@@ -25,7 +25,23 @@ Do **not** use aliases such as Elephant, Wild Boar, Chital, Leopard, Dhole, or M
 
 ## 2. CIVET — Small Indian Civet or Common Palm Civet only
 
-Use **"Small Indian Civet"** for small spotted terrestrial civets — not "Common Indian Civet", "Indian Common Genet", or **"Large Indian Civet"** (Large Indian Civet does not occur in Kerala — never use it). Use **"Common Palm Civet"** for arboreal palm civets — not "Brown Palm Civet".
+Use **"Small Indian Civet"** or **"Common Palm Civet"** only — not "Common Indian Civet", "Indian Common Genet", "Brown Palm Civet", or **"Large Indian Civet"** (Large Indian Civet does not occur in Kerala — never use it).
+
+### Common Palm Civet (verified reference set)
+
+Verified ground-truth examples live in `test-fixtures/golden/common-palm-civet/` (e.g. I__00040, I__00053, I__00100, I__00114–117, I__00203, I__00252, I__00307, I__00931). Use these traits:
+
+- **Long, thick, mostly dark tail** roughly as long as the body (held out behind while walking) — not a short mongoose tail.
+- **Elongated low body** with short legs; often walking on leaf litter / rocks at night (may look “arboreal species on the ground”).
+- Coat **grey-buff to brown** with **dark longitudinal stripes along the back** that often break into **rows of spots on the flanks**.
+- Face often darker with **pale patches / mask** near the eyes; strong eyeshine at night is common.
+- Do **not** call these **Grey Mongoose** / **Stripe-necked Mongoose** (mongooses are shorter-bodied with much shorter tails and no long striped/spotted civet pattern).
+- Do **not** call them **Jackal** or **Wild Dog**.
+- Do **not** call them **Large Indian Civet**. Prefer **Common Palm Civet** when the long dark tail + back stripes/flank spots match; use **Small Indian Civet** only when the animal better matches a smaller densely spotted civet with a more clearly banded/ringed tail pattern.
+
+### Small Indian Civet
+
+Smaller, more finely spotted terrestrial civet; tail more clearly patterned/ringed than the typical thick dark Common Palm Civet tail in the reference set above.
 
 ## 3. INDIAN CHEVROTAIN — Do not confuse with cats or civets
 

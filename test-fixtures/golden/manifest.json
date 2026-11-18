@@ -1,0 +1,23 @@
+{
+  "station": "FFS Station C8 / related FFS cameras",
+  "description": "Human-verified reference photos for species calibration. Expected label is the canonical species_common string.",
+  "examples": [
+    {
+      "species": "Common Palm Civet",
+      "folder": "common-palm-civet",
+      "photos": [
+        "I__00040.jpg",
+        "I__00053.jpg",
+        "I__00100.jpg",
+        "I__00114.jpg",
+        "I__00115.jpg",
+        "I__00117.jpg",
+        "I__00203.jpg",
+        "I__00252.jpg",
+        "I__00307.jpg",
+        "I__00931.jpg"
+      ],
+      "notes": "Long thick dark tail ≈ body length; longitudinal dark stripes on back breaking into flank spots; coarse grey-buff coat; facial mask / pale patches near eyes; often on ground at night in leaf litter (Cuddeback FFS sites)."
+    }
+  ]
+}

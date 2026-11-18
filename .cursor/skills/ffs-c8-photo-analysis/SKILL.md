@@ -54,7 +54,7 @@ Full text lives in `lib/llm/ffs-c8-rules.md`. Canonical name list: [`lib/species
 
 0. **Canonical names** — wildlife labels from the dimension list only (e.g. Asian Elephant, Indian Wild Pig, Spotted Deer, Common Leopard). Never Jackal; never Large Indian Civet.
 1. **Mongoose** — both Grey and Stripe-necked occur; require clear neck stripe for Stripe-necked; without stripe prefer Grey Mongoose.
-2. **Civet** — "Small Indian Civet" / "Common Palm Civet" only (no Large Indian Civet in Kerala).
+2. **Civet** — "Small Indian Civet" / "Common Palm Civet" only (no Large Indian Civet). Palm civet: long dark tail ≈ body, back stripes + flank spots (see `test-fixtures/golden/common-palm-civet/`).
 3. **Indian Chevrotain** — hooves + mouse-deer shape; do not call cat/civet.
 4. **Deer** — never White-tailed Deer; use Spotted Deer, Sambar Deer, Indian Muntjac (not Chital).
 5. **Primates** — "South-Eastern Langur"; "Bonnet Macaque".
@@ -73,6 +73,7 @@ Append newest entries at the top.
 
 | Date | Issue | Rule change |
 |------|--------|-------------|
+| 2026-11-18 | Common Palm Civet verified photo set | Rule 2 + golden fixtures for palm civet traits |
 | 2026-11-18 | Grey→Stripe-necked mongoose errors; Jackal; Large Indian Civet | Both mongooses present; ban Jackal; ban Large Indian Civet |
 | 2026-11-18 | Standard species name list | Canonical dimension + Rule 0; aliases (Wild Boar→Indian Wild Pig, Elephant→Asian Elephant, …) |
 | 2026-11-02 | I__00046 wild boar piglets labeled Elephant | New Rule 13: Wild Boar vs Elephant (stripes, snout, scale); Rule 9 must not default to Elephant |
