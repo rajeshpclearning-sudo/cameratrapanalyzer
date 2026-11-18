@@ -53,7 +53,7 @@ Do this in the **same turn** as the fix — do not wait for the user to ask for 
 Full text lives in `lib/llm/ffs-c8-rules.md`. Canonical name list: [`lib/species-dimension.ts`](../../../lib/species-dimension.ts). Apply strictly:
 
 0. **Canonical names** — wildlife labels from the dimension list only (e.g. Asian Elephant, Indian Wild Pig, Spotted Deer, Common Leopard). Never Jackal; never Large Indian Civet.
-1. **Mongoose** — both Grey and Stripe-necked occur; require clear neck stripe for Stripe-necked; without stripe prefer Grey Mongoose.
+1. **Mongoose** — both occur; Grey = grizzled coat, no neck stripe (`test-fixtures/golden/grey-mongoose/`); Stripe-necked only with clear neck stripe.
 2. **Civet** — "Small Indian Civet" / "Common Palm Civet" only (no Large Indian Civet). Palm civet: long dark tail ≈ body, back stripes + flank spots (see `test-fixtures/golden/common-palm-civet/`).
 3. **Indian Chevrotain** — hooves + mouse-deer shape; do not call cat/civet.
 4. **Deer** — never White-tailed Deer; use Spotted Deer, Sambar Deer, Indian Muntjac (not Chital).
@@ -73,6 +73,7 @@ Append newest entries at the top.
 
 | Date | Issue | Rule change |
 |------|--------|-------------|
+| 2026-11-18 | Grey Mongoose verified photo set | Rule 1 + golden fixtures; no neck stripe → Grey Mongoose |
 | 2026-11-18 | Common Palm Civet verified photo set | Rule 2 + golden fixtures for palm civet traits |
 | 2026-11-18 | Grey→Stripe-necked mongoose errors; Jackal; Large Indian Civet | Both mongooses present; ban Jackal; ban Large Indian Civet |
 | 2026-11-18 | Standard species name list | Canonical dimension + Rule 0; aliases (Wild Boar→Indian Wild Pig, Elephant→Asian Elephant, …) |

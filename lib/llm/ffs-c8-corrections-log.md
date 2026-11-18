@@ -5,6 +5,7 @@ When accuracy feedback is consolidated into `ffs-c8-rules.md` and committed to G
 
 | Date | Issue | Rule change |
 |------|--------|-------------|
+| 2026-11-18 | Verified Grey Mongoose photo set (8 images) | Rule 1 expanded with golden refs in `test-fixtures/golden/grey-mongoose/`; no neck stripe → Grey Mongoose, not Stripe-necked |
 | 2026-11-18 | Verified Common Palm Civet photo set (10 images) | Rule 2 expanded with field traits + golden refs in `test-fixtures/golden/common-palm-civet/`; do not confuse with mongoose/Jackal/Large Indian Civet |
 | 2026-11-18 | Grey Mongoose mislabeled Stripe-necked; Jackal used; Large Indian Civet used | Rule 1: both mongooses present — require neck stripe for Stripe-necked; ban Jackal; ban Large Indian Civet (not in Kerala); normalize those labels to Unidentified |
 | 2026-11-18 | Standard species name list for Station C8 | Canonical dimension (`lib/species-dimension.ts` + optional Supabase `species_dimension`); Rule 0; aliases map e.g. Wild Boar→Indian Wild Pig, Elephant→Asian Elephant |

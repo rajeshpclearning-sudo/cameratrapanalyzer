@@ -18,9 +18,23 @@ Do **not** use aliases such as Elephant, Wild Boar, Chital, Leopard, Dhole, or M
 
 **Both species are present** at this station. Do **not** default every mongoose to Stripe-necked Mongoose — that wrongly re-labels many **Grey Mongoose**.
 
-- **Stripe-necked Mongoose**: use only when a clear **dark stripe along the side of the neck** (or other clear stripe-necked traits) is visible.
-- **Grey Mongoose**: grizzled grey/brown mongoose **without** a clear neck stripe; often more uniformly grey. If it is clearly a mongoose and **no** neck stripe is visible, prefer **Grey Mongoose** over Stripe-necked.
-- If mongoose vs other small carnivore is unclear, use **Unidentified** — do not guess Stripe-necked by default.
+### Grey Mongoose (verified reference set)
+
+Verified examples: `test-fixtures/golden/grey-mongoose/` (e.g. I__00003, I__00006, I__00019, I__00039, I__00064, I__00111, I__00177, I__00182). Traits:
+
+- **Uniform grizzled / salt-and-pepper grey-brown** coat along the whole body — **no** dark longitudinal stripe on the side of the neck.
+- Long low body, short legs, **bushy tapering tail** (may look slightly darker toward the tip, but not a civet’s long thick nearly body-length dark tail).
+- Pointed snout, small rounded ears; often foraging on leaf litter day or night; sometimes **two individuals** together.
+- Label these **"Grey Mongoose"**, not Stripe-necked Mongoose, not Common Palm Civet, not Jackal.
+
+### Stripe-necked Mongoose
+
+- Use **"Stripe-necked Mongoose"** **only** when a clear **dark stripe along the side of the neck** (or unmistakable stripe-necked traits) is visible.
+- If it is clearly a mongoose and **no** neck stripe is visible, prefer **Grey Mongoose**.
+
+### Other
+
+- If mongoose vs civet/other small carnivore is unclear, use **Unidentified** — do not guess Stripe-necked by default.
 - Do not invent other mongoose labels. If a yellow/golden throat patch clearly indicates a marten (not on the canonical list), use **Unidentified**.
 
 ## 2. CIVET — Small Indian Civet or Common Palm Civet only

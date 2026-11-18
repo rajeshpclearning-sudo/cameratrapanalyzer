@@ -263,6 +263,7 @@ export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
               "Use canonical species names only (e.g. Asian Elephant, Spotted Deer, Common Leopard). " +
               "Never label Jackal or Large Indian Civet. Distinguish Grey Mongoose vs Stripe-necked Mongoose (both occur; do not default all to Stripe-necked). " +
               "Common Palm Civet: long thick dark tail ≈ body length, back stripes + flank spots — not mongoose. " +
+              "Grey Mongoose: grizzled grey coat with NO neck stripe — do not default mongooses to Stripe-necked. " +
               "If a person clearly carries or holds a weapon (gun, rifle, bow, spear, machete, etc.), " +
               "set has_weapon true and species_common to Human (armed). " +
               "Honor any PENDING USER FEEDBACK in the system prompt for similar mistakes.",
