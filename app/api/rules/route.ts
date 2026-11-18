@@ -4,6 +4,7 @@ import {
   loadCorrectionsLogMarkdown,
   loadStationRulesMarkdown,
 } from "@/lib/llm/load-rules";
+import { CANONICAL_WILDLIFE_SPECIES } from "@/lib/species-dimension";
 
 export const runtime = "nodejs";
 
@@ -17,10 +18,11 @@ export async function GET() {
   return NextResponse.json({
     title: "FFS Station C8 — Wild animal detection rules",
     station: "Forest First Samithi, Station C8, Wayanad, Kerala",
+    canonicalSpecies: [...CANONICAL_WILDLIFE_SPECIES],
     rulesMarkdown,
     correctionsMarkdown,
     pendingFeedback,
     updatedHint:
-      "Rules update when accuracy fixes are committed to GitHub and Vercel redeploys. Pending preview feedback is used on the next analysis immediately.",
+      "Rules update when accuracy fixes are committed to GitHub and Vercel redeploys. Pending preview feedback is used on the next analysis immediately. Canonical species names are the standard labels for wildlife logs.",
   });
 }

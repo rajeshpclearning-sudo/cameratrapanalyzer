@@ -4,9 +4,15 @@ You are assisting with wildlife camera trap image analysis for Forest First Sami
 
 This file is the **live rule book** shown in WildEye under **Species Rules**. When preview feedback is consolidated, edit this file, append [`ffs-c8-corrections-log.md`](ffs-c8-corrections-log.md), commit, and push so the next deploy updates the UI and all vision calls.
 
-## 1. MONGOOSE — Always use Stripe-necked Mongoose
+## 0. CANONICAL SPECIES NAMES — Use the standard list only
 
-The dominant mongoose at this station is the Stripe-necked Mongoose (Urva vitticolla). Do not classify as Indian Brown Mongoose, Ruddy Mongoose, or Indian Grey Mongoose unless the image clearly rules out Stripe-necked Mongoose. Look for the dark stripe along the side of the neck. Yellow-throated Marten is a separate mustelid species — classify it separately only if a yellow/golden throat patch is clearly visible.
+Wildlife `species_common` values must use the Station C8 **canonical dimension** names (exact spelling), including: Spotted Deer, Asian Elephant, Gaur, Sambar Deer, Indian Muntjac, Indian Hare, Indian Crested Porcupine, Indian Chevrotain, Bonnet Macaque, South-Eastern Langur, Common Leopard, Leopard Cat, Wild Dog, Tiger, Indian Wild Pig, Common Palm Civet, Small Indian Civet, Stripe-necked Mongoose, Grey Mongoose, Sloth Bear.
+
+Do **not** use aliases such as Elephant, Wild Boar, Chital, Leopard, Dhole, or Mouse Deer in the output — map them to the canonical names above. Humans use **Human** / **Human (armed)**; empty frames use **No animal detected**; if wildlife cannot be mapped to the list, use **Unidentified**.
+
+## 1. MONGOOSE — Prefer Stripe-necked Mongoose; Grey Mongoose only when clear
+
+The dominant mongoose at this station is the **Stripe-necked Mongoose**. Look for the dark stripe along the side of the neck. Use **Grey Mongoose** only when the animal clearly matches grey mongoose and is not stripe-necked. Do not invent other mongoose labels. If a yellow/golden throat patch clearly indicates a marten (not on the canonical list), use **Unidentified**.
 
 ## 2. CIVET — Use consistent species names
 
@@ -18,7 +24,7 @@ The Indian Chevrotain (Mouse Deer, Moschiola indica) is rabbit-sized with thin d
 
 ## 4. DEER — Do not use White-tailed Deer
 
-White-tailed Deer is a North American species not found in India. Never use this classification. Use: "Spotted Deer" or "Chital" (Axis axis) for spotted deer; "Sambar Deer" (Rusa unicolor) for large dark deer with sweeping antlers; "Indian Muntjac" (Muntiacus muntjak) for small solitary deer without visible spots.
+White-tailed Deer is a North American species not found in India. Never use this classification. Use: **"Spotted Deer"** (not "Chital") for spotted deer; **"Sambar Deer"** for large dark deer with sweeping antlers; **"Indian Muntjac"** for small solitary deer without visible spots.
 
 ## 5. PRIMATES — Use South-Eastern Langur
 
@@ -32,7 +38,7 @@ Classify grey langurs at this station as "South-Eastern Langur" — not "Grey La
 
 **Jungle Cat** (Felis chaus): larger than Leopard Cat but far smaller than Tiger; plain sandy/tawny coat, long-legged, minimal markings, black-tipped tail.
 
-If spots/rosettes are clearly visible on a **small** wild cat, classify as Leopard Cat. If the coat is plain and mid-sized, classify as Jungle Cat. Use "Small wild cat (Jungle Cat / Leopard Cat)" only when genuinely unclear between those two — never as a substitute for an obvious Tiger.
+If spots/rosettes are clearly visible on a **small** wild cat, classify as **Leopard Cat**. If the coat is plain and mid-sized (Jungle Cat type) and does not match Leopard Cat or Common Leopard, use **Unidentified** (Jungle Cat is not on the canonical species list). Never use a vague cat label as a substitute for an obvious **Tiger** or **Common Leopard**.
 
 ## 7. SECONDARY/BACKGROUND ANIMALS — Verify before reporting
 
@@ -58,11 +64,11 @@ If any animal tissue is clearly visible at the frame edge or mostly leaving/ente
 - Prefer a confident common name over "No animal detected" or "Partial animal visible at frame edge — species unconfirmed".
 - Only use "Unidentified" when the visible fragment is too small or ambiguous to support any species guess (e.g. a tiny blur with no shape). Do **not** use the old phrase "Partial animal visible at frame edge — species unconfirmed" as `species_common`.
 - This rule is **species-agnostic**: never reserve partial-body handling for one taxon only. A cut-off elephant, tiger, sambar, wild boar, or any other clear animal must get a species label, not an empty-frame label.
-- **Do not default to Elephant** just because a body is grey/brown or partially cut off — check snout vs trunk, size vs vegetation, and coat (see Rule 13).
+- **Do not default to Asian Elephant** just because a body is grey/brown or partially cut off — check snout vs trunk, size vs vegetation, and coat (see Rule 13).
 - Illustrative cases (same rule for all animals):
-  - Elephant walking out of frame — label **Elephant** (count 1) when the visible bulk matches an elephant (trunk/pillar legs/huge scale).
+  - Elephant walking out of frame — label **Asian Elephant** (count 1) when the visible bulk matches an elephant (trunk/pillar legs/huge scale).
   - Tiger entering with hindquarters cut off (e.g. I__00359) — label **Tiger** (count 1).
-  - Same idea for deer, gaur, wild boar, civet, and every other Station C8 species.
+  - Same idea for deer, gaur, Indian Wild Pig, civet, and every other Station C8 species.
 
 ## 10. HUMANS — Judge each frame on its own; do not invent or miss people
 
@@ -102,7 +108,7 @@ Burst neighbors:
 
 When **two or more different species** are clearly visible in the same photo:
 
-- `species_common` must list **all** clear species, joined with `" + "` (spaces around the plus), using Station C8 names. Example: **"Sambar Deer + Spotted Deer"** (or **"Sambar Deer + Chital"**). Do **not** report only the largest / nearest animal.
+- `species_common` must list **all** clear species, joined with `" + "` (spaces around the plus), using **canonical** Station C8 names. Example: **"Sambar Deer + Spotted Deer"**. Do **not** report only the largest / nearest animal.
 - `individual_count` = **total** distinct animals of all those species combined (e.g. one Sambar + one Spotted Deer → `2`).
 - `individuals_description` = that same total as a string (e.g. `"2"`).
 - Order species roughly by prominence (larger or closer first), then remaining clear species.
@@ -111,20 +117,20 @@ When **two or more different species** are clearly visible in the same photo:
 
 Canonical miss to avoid: I__00796 — Sambar browsing left and Spotted Deer (Chital) grazing right must be **"Sambar Deer + Spotted Deer"** with count `2`, not Sambar alone.
 
-## 13. WILD BOAR vs ELEPHANT — Do not confuse piglets with elephants
+## 13. INDIAN WILD PIG vs ASIAN ELEPHANT — Do not confuse piglets with elephants
 
-**Wild Boar** (Wild Pig, Sus scrofa): use species_common **"Wild Boar"**.
+**Indian Wild Pig** (Wild Boar / Wild Pig, Sus scrofa): use species_common **"Indian Wild Pig"** (never "Wild Boar" in the output).
 
 - Long **snout** (not a trunk), pointed upright ears, thin legs, coarse hair.
-- Juveniles / piglets often have clear **horizontal light stripes** on a brown coat — this pattern is diagnostic of wild boar young, **never** of elephants.
+- Juveniles / piglets often have clear **horizontal light stripes** on a brown coat — this pattern is diagnostic of wild pig young, **never** of elephants.
 - Body size is small-to-medium relative to grass, saplings, and undergrowth; a sounder may include several small animals plus an adult.
 
-**Elephant** (Asian Elephant): use **"Elephant"** only when the animal is clearly a large elephant — pillar-like legs, massive body dwarfing nearby vegetation, and ideally a **trunk** and/or large ears. Adult/juvenile elephants do **not** have horizontal body stripes like boar piglets.
+**Asian Elephant**: use **"Asian Elephant"** (never bare "Elephant") only when the animal is clearly a large elephant — pillar-like legs, massive body dwarfing nearby vegetation, and ideally a **trunk** and/or large ears. Adult/juvenile elephants do **not** have horizontal body stripes like piglets.
 
 **Hard rules:**
 
-- Striped small ungulate-like mammals in grass = **Wild Boar**, not Elephant.
-- Multiple small similar animals at ground level with pig-like heads = Wild Boar (count all visible individuals).
-- Never label wild boar piglets as Elephant because they are grey-brown, dusty, or partially obscured.
+- Striped small ungulate-like mammals in grass = **Indian Wild Pig**, not Asian Elephant.
+- Multiple small similar animals at ground level with pig-like heads = Indian Wild Pig (count all visible individuals).
+- Never label wild pig piglets as Asian Elephant because they are grey-brown, dusty, or partially obscured.
 
-Canonical miss to avoid: I__00046 — several small striped wild boars (and adult) must be **"Wild Boar"** with the correct headcount, **not** Elephant.
+Canonical miss to avoid: I__00046 — several small striped Indian Wild Pigs (and adult) must be **"Indian Wild Pig"** with the correct headcount, **not** Asian Elephant.

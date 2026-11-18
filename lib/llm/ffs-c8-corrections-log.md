@@ -5,6 +5,7 @@ When accuracy feedback is consolidated into `ffs-c8-rules.md` and committed to G
 
 | Date | Issue | Rule change |
 |------|--------|-------------|
+| 2026-11-18 | Standard species name list for Station C8 | Canonical dimension (`lib/species-dimension.ts` + optional Supabase `species_dimension`); Rule 0; aliases map e.g. Wild Boar→Indian Wild Pig, Elephant→Asian Elephant |
 | 2026-11-02 | I__00046: wild boar piglets called Elephant | Rule 13 Wild Boar vs Elephant; Rule 9 no elephant default for small striped animals |
 | 2026-11-02 | I__00796: Sambar + Spotted Deer, only Sambar named | Rule 12 multi-species: `species_common` = "A + B"; count = total animals; Rule 7 cannot drop a clear second species |
 | 2026-11-02 | Partial-body rule for all animals (not Tiger-only) | Rules 7–9 + prompt: any clear partial wildlife of any species → best species name, never empty |

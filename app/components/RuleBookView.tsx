@@ -15,6 +15,7 @@ type FeedbackRow = {
 type RulesPayload = {
   title: string;
   station: string;
+  canonicalSpecies?: string[];
   rulesMarkdown: string;
   correctionsMarkdown: string;
   pendingFeedback: FeedbackRow[];
@@ -128,6 +129,30 @@ export function RuleBookView() {
               {data.updatedHint}
             </p>
           </div>
+
+          {data.canonicalSpecies && data.canonicalSpecies.length > 0 && (
+            <section className="space-y-sm">
+              <h3 className="flex items-center gap-sm text-headline-sm font-semibold text-on-surface">
+                <Icon name="pets" className="text-primary" />
+                Canonical species names
+              </h3>
+              <p className="text-label-md text-on-surface-variant">
+                Standard wildlife labels for this station. Analysis should use
+                these exact spellings (plus Human / Human (armed) / Unidentified /
+                No animal detected).
+              </p>
+              <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2 md:grid-cols-3">
+                {data.canonicalSpecies.map((name) => (
+                  <li
+                    key={name}
+                    className="rounded-lg border border-outline-variant bg-surface-container px-sm py-2 text-label-md"
+                  >
+                    {name}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           {data.pendingFeedback.length > 0 && (
             <section className="space-y-sm">

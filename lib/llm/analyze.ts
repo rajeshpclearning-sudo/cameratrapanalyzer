@@ -1,10 +1,14 @@
 import OpenAI from "openai";
 import { loadPendingFeedbackForPrompt } from "../feedback-store";
+import {
+  formatSpeciesDimensionForPrompt,
+  normalizeSpeciesCommonLabel,
+} from "../species-dimension";
 import type { LlmAnalysis } from "../types";
 import { loadStationRulesMarkdown } from "./load-rules";
 
 const BASE_SYSTEM_PROMPT = `You analyze forest camera-trap photographs from India (FFS Station C8, Wayanad, Kerala).
-Return JSON only. Use common English species names in species_common (scientific names may appear in the station rules for reference only — do not put them in JSON fields).
+Return JSON only. Use species_common names from the CANONICAL SPECIES NAMES list below (exact spelling). Scientific names in the station rules are for reference only — do not put them in JSON fields.
 Count only visible individuals.
 Apply the station classification rules below strictly — they override generic wildlife knowledge when they conflict.
 
@@ -30,7 +34,7 @@ Other rules:
 - Never use "Partial animal visible at frame edge — species unconfirmed" as species_common.
 - Any clear animal that is only partly in frame (any species) gets a species name — never "No animal detected".
 - Never drop a clear second species: name every identifiable species in the frame (Rule 12).
-- Wild Boar piglets (often striped, snout not trunk, small vs grass) are Wild Boar — never Elephant.
+- Indian Wild Pig piglets (often striped, snout not trunk, small vs grass) are Indian Wild Pig — never Asian Elephant.
 - For vague background/secondary shapes only, follow the station verification rules (eye-shine alone is not enough).`;
 
 /** FFS Station C8 rules — edited when accuracy feedback improves identification. */
@@ -41,7 +45,7 @@ export function loadStationClassificationRules(): string {
 async function buildSystemPrompt(): Promise<string> {
   const rules = loadStationClassificationRules();
   const pending = await loadPendingFeedbackForPrompt();
-  const parts = [BASE_SYSTEM_PROMPT];
+  const parts = [BASE_SYSTEM_PROMPT, formatSpeciesDimensionForPrompt()];
   if (rules) {
     parts.push(
       `---\nSTATION CLASSIFICATION RULES (mandatory):\n\n${rules}`,
@@ -255,7 +259,8 @@ export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
               "and for people, human legs/feet, fingers/hands, and belongings (bag, sandals). " +
               "If wildlife or human evidence is present, this is NOT an empty frame — name every clear species " +
               "(e.g. Sambar Deer + Spotted Deer when both are visible; count = total animals). " +
-              "Do not call striped wild boar piglets Elephant — use Wild Boar. " +
+              "Do not call striped Indian Wild Pig piglets Asian Elephant — use Indian Wild Pig. " +
+              "Use canonical species names only (e.g. Asian Elephant, Spotted Deer, Common Leopard). " +
               "If a person clearly carries or holds a weapon (gun, rifle, bow, spear, machete, etc.), " +
               "set has_weapon true and species_common to Human (armed). " +
               "Honor any PENDING USER FEEDBACK in the system prompt for similar mistakes.",
@@ -310,6 +315,10 @@ export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
   }
 
   if (!parsed.has_human) parsed.has_weapon = false;
+
+  parsed.species_common = normalizeSpeciesCommonLabel(
+    parsed.species_common ?? "",
+  );
 
   return parsed;
 }

@@ -198,7 +198,7 @@ export function PreviewModal({
                     type="text"
                     value={correctSpecies}
                     onChange={(e) => setCorrectSpecies(e.target.value)}
-                    placeholder="e.g. Elephant, Human, No animal detected"
+                    placeholder="e.g. Asian Elephant, Indian Wild Pig, Human"
                     className="w-full rounded-lg border border-outline-variant bg-surface-container px-sm py-2 text-label-md text-on-surface"
                   />
                 </label>

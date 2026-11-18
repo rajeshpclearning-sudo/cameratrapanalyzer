@@ -50,21 +50,22 @@ Do this in the **same turn** as the fix — do not wait for the user to ask for 
 
 ## Classification rules (summary)
 
-Full text lives in `lib/llm/ffs-c8-rules.md`. Apply strictly:
+Full text lives in `lib/llm/ffs-c8-rules.md`. Canonical name list: [`lib/species-dimension.ts`](../../../lib/species-dimension.ts). Apply strictly:
 
-1. **Mongoose** — default Stripe-necked Mongoose; Yellow-throated Marten only with clear yellow/golden throat.
-2. **Civet** — "Small Indian Civet" / "Common Palm Civet"; "Large Indian Civet" only with clear neck collar.
+0. **Canonical names** — wildlife labels from the dimension list only (e.g. Asian Elephant, Indian Wild Pig, Spotted Deer, Common Leopard).
+1. **Mongoose** — prefer Stripe-necked Mongoose; Grey Mongoose only when clear; else Unidentified for non-list mustelids.
+2. **Civet** — "Small Indian Civet" / "Common Palm Civet".
 3. **Indian Chevrotain** — hooves + mouse-deer shape; do not call cat/civet.
-4. **Deer** — never White-tailed Deer; use Spotted Deer/Chital, Sambar, Indian Muntjac.
-5. **Primates** — "South-Eastern Langur"; "Bonnet Macaque"; uncertain only when genuinely unclear.
-6. **Wild cats** — Tiger (large, black stripes); Leopard Cat (small, rosettes); Jungle Cat (plain tawny).
+4. **Deer** — never White-tailed Deer; use Spotted Deer, Sambar Deer, Indian Muntjac (not Chital).
+5. **Primates** — "South-Eastern Langur"; "Bonnet Macaque".
+6. **Wild cats** — Tiger; Common Leopard; Leopard Cat; plain mid-size cat not on list → Unidentified.
 7. **Background animals** — need ≥2 anatomical features for vague secondary shapes only; any clear main-subject animal (partial or full) must be reported.
 8. **Empty frames** — "No animal detected" only when truly empty.
 9. **Partial / edge-of-frame** — intelligent species guess + count for **all** species (not "No animal").
 10. **Humans** — per-frame only; include body parts (fingers) and belongings (bag/sandals); correct count; never invent or miss people across burst neighbors.
 11. **Armed humans** — if a person clearly carries/holds a weapon, `has_weapon` true and species **Human (armed)** (dashboard shows these rows in red).
 12. **Multiple species** — list every clear species in `species_common` joined with ` + `; `individual_count` = total animals.
-13. **Wild Boar vs Elephant** — striped/small piglets with snouts are Wild Boar; never Elephant.
+13. **Indian Wild Pig vs Asian Elephant** — striped/small piglets with snouts are Indian Wild Pig; never Asian Elephant.
 
 ## Corrections log
 
@@ -72,6 +73,7 @@ Append newest entries at the top.
 
 | Date | Issue | Rule change |
 |------|--------|-------------|
+| 2026-11-18 | Standard species name list | Canonical dimension + Rule 0; aliases (Wild Boar→Indian Wild Pig, Elephant→Asian Elephant, …) |
 | 2026-11-02 | I__00046 wild boar piglets labeled Elephant | New Rule 13: Wild Boar vs Elephant (stripes, snout, scale); Rule 9 must not default to Elephant |
 | 2026-11-02 | I__00796 Sambar + Spotted Deer; only Sambar reported | New Rule 12: multi-species frames use "A + B"; count = total; Rule 7 must not drop clear second species |
 | 2026-11-02 | Partial-animal rule must apply to all species, not only Tiger | Rules 7–9 + prompt generalized: any clear partial wildlife → species name, never empty |
