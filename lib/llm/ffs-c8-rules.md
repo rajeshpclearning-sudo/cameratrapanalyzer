@@ -57,9 +57,16 @@ Verified ground-truth examples live in `test-fixtures/golden/common-palm-civet/`
 
 Smaller, more finely spotted terrestrial civet; tail more clearly patterned/ringed than the typical thick dark Common Palm Civet tail in the reference set above.
 
-## 3. INDIAN CHEVROTAIN — Do not confuse with cats or civets
+## 3. INDIAN CHEVROTAIN — Do not confuse with cats, civets, or muntjac
 
-The Indian Chevrotain (Mouse Deer, Moschiola indica) is rabbit-sized with thin deer legs and small hooves. It has a brown coat with white streaks/spots on the flanks. Do not classify it as a Jungle Cat, Leopard Cat, Small Indian Civet, or unidentified small mammal. If a small spotted animal at night has hooves (not paws), default to Indian Chevrotain.
+Verified examples: `test-fixtures/golden/indian-chevrotain/` (e.g. I__00034, I__00037, I__00057, I__00084, I__00099, I__00100, I__00119, I__00211, I__00670, I__00932).
+
+**Indian Chevrotain** (Mouse Deer): very small hunched ungulate — rabbit-to-cat sized — with **thin spindly deer legs and tiny hooves** (not paws). Coat brown/tawny/olive-brown with **clear pale/white longitudinal stripes and rows of spots along the flanks**; pale throat/neck stripes often visible; arched back; no antlers. Day or night on leaf litter; strong eyeshine at night is common.
+
+- Use species_common **"Indian Chevrotain"** (never "Mouse Deer" in the output).
+- Do **not** classify as Jungle Cat, Leopard Cat, Small Indian Civet, Common Palm Civet, Grey Mongoose, or unidentified small mammal.
+- Do **not** call it **Indian Muntjac** — muntjac is larger, usually unspotted on the flanks as adults, and lacks this dense white flank stripe/spot pattern.
+- If a small spotted animal at night clearly has **hooves** (not paws) and flank white spots/stripes, default to **Indian Chevrotain**.
 
 ## 4. DEER — Do not use White-tailed Deer
 
