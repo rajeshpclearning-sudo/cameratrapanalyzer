@@ -25,4 +25,12 @@ describe("species-dimension", () => {
     expect(normalizeSpeciesCommonLabel("Human")).toBe("Human");
     expect(normalizeSpeciesCommonLabel("Human (armed)")).toBe("Human (armed)");
   });
+
+  it("rejects out-of-area Jackal and Large Indian Civet labels", () => {
+    expect(normalizeSpeciesCommonLabel("Jackal")).toBe("Unidentified");
+    expect(normalizeSpeciesCommonLabel("Golden Jackal")).toBe("Unidentified");
+    expect(normalizeSpeciesCommonLabel("Large Indian Civet")).toBe(
+      "Unidentified",
+    );
+  });
 });

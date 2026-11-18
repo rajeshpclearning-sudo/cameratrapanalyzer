@@ -132,14 +132,35 @@ export function normalizeSpeciesCommonLabel(raw: string): string {
   if (text.includes("+")) {
     return text
       .split("+")
-      .map((part) => {
-        const trimmed = part.trim();
-        return resolveCanonicalWildlifeName(trimmed) ?? trimmed;
-      })
+      .map((part) => normalizeSingleWildlifeOrSpecial(part.trim()))
       .join(" + ");
   }
 
-  return resolveCanonicalWildlifeName(text) ?? text;
+  return normalizeSingleWildlifeOrSpecial(text);
+}
+
+/** Banned / out-of-area labels → Unidentified (or canonical remap). */
+function normalizeSingleWildlifeOrSpecial(name: string): string {
+  const key = normalizeKey(name);
+  if (!key) return name;
+
+  if (
+    key === "jackal" ||
+    key === "golden jackal" ||
+    key === "indian jackal" ||
+    key.includes("jackal")
+  ) {
+    return "Unidentified";
+  }
+  if (
+    key === "large indian civet" ||
+    key === "large civet" ||
+    key.includes("large indian civet")
+  ) {
+    return "Unidentified";
+  }
+
+  return resolveCanonicalWildlifeName(name) ?? name;
 }
 
 /** Markdown block injected into the vision system prompt. */
@@ -151,6 +172,8 @@ export function formatSpeciesDimensionForPrompt(): string {
     "",
     "Also allowed: Human, Human (armed), Unidentified, and No animal detected (empty frames).",
     "Do not invent alternate spellings (e.g. use Asian Elephant not Elephant; Indian Wild Pig not Wild Boar; Spotted Deer not Chital; Common Leopard not Leopard; Wild Dog not Dhole).",
+    "Never use Jackal (absent here) or Large Indian Civet (not in Kerala).",
+    "Both Grey Mongoose and Stripe-necked Mongoose occur — do not label every mongoose Stripe-necked; require a clear neck stripe for Stripe-necked.",
     "For multi-species frames, join canonical names with \" + \".",
     "If the animal is clearly wildlife but not on this list and cannot be mapped, use Unidentified.",
   ].join("\n");

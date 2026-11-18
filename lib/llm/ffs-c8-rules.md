@@ -10,13 +10,22 @@ Wildlife `species_common` values must use the Station C8 **canonical dimension**
 
 Do **not** use aliases such as Elephant, Wild Boar, Chital, Leopard, Dhole, or Mouse Deer in the output — map them to the canonical names above. Humans use **Human** / **Human (armed)**; empty frames use **No animal detected**; if wildlife cannot be mapped to the list, use **Unidentified**.
 
-## 1. MONGOOSE — Prefer Stripe-necked Mongoose; Grey Mongoose only when clear
+**Never use these labels at Station C8 (wrong for this area):**
+- **Jackal** / Golden Jackal — **absent** here. Do not output Jackal. A canid that matches dhole features → **Wild Dog**; otherwise **Unidentified** (or another clear canonical species). Never force Jackal.
+- **Large Indian Civet** — **no distribution in Kerala**. Never output Large Indian Civet. Use **Small Indian Civet** or **Common Palm Civet** from visible traits, or **Unidentified** if unclear.
 
-The dominant mongoose at this station is the **Stripe-necked Mongoose**. Look for the dark stripe along the side of the neck. Use **Grey Mongoose** only when the animal clearly matches grey mongoose and is not stripe-necked. Do not invent other mongoose labels. If a yellow/golden throat patch clearly indicates a marten (not on the canonical list), use **Unidentified**.
+## 1. MONGOOSE — Both Stripe-necked and Grey Mongoose occur here
 
-## 2. CIVET — Use consistent species names
+**Both species are present** at this station. Do **not** default every mongoose to Stripe-necked Mongoose — that wrongly re-labels many **Grey Mongoose**.
 
-Use "Small Indian Civet" (Viverricula indica) for small spotted civets — not "Common Indian Civet", "Indian Common Genet", or "Large Indian Civet". Use "Common Palm Civet" (Paradoxurus hermaphroditus) for arboreal palm civets — not "Brown Palm Civet". Only use "Large Indian Civet" if a prominent black-and-white neck collar is clearly visible.
+- **Stripe-necked Mongoose**: use only when a clear **dark stripe along the side of the neck** (or other clear stripe-necked traits) is visible.
+- **Grey Mongoose**: grizzled grey/brown mongoose **without** a clear neck stripe; often more uniformly grey. If it is clearly a mongoose and **no** neck stripe is visible, prefer **Grey Mongoose** over Stripe-necked.
+- If mongoose vs other small carnivore is unclear, use **Unidentified** — do not guess Stripe-necked by default.
+- Do not invent other mongoose labels. If a yellow/golden throat patch clearly indicates a marten (not on the canonical list), use **Unidentified**.
+
+## 2. CIVET — Small Indian Civet or Common Palm Civet only
+
+Use **"Small Indian Civet"** for small spotted terrestrial civets — not "Common Indian Civet", "Indian Common Genet", or **"Large Indian Civet"** (Large Indian Civet does not occur in Kerala — never use it). Use **"Common Palm Civet"** for arboreal palm civets — not "Brown Palm Civet".
 
 ## 3. INDIAN CHEVROTAIN — Do not confuse with cats or civets
 
