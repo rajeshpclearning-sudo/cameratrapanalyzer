@@ -15,9 +15,27 @@
         "I__00203.jpg",
         "I__00252.jpg",
         "I__00307.jpg",
-        "I__00931.jpg"
+        "I__00931.jpg",
+        "I__01360.jpg"
       ],
-      "notes": "Long thick dark tail ≈ body length; longitudinal dark stripes on back breaking into flank spots; coarse grey-buff coat; facial mask / pale patches near eyes; often on ground at night in leaf litter (Cuddeback FFS sites)."
+      "notes": "Long thick mostly dark tail ≈ body length (not bold black/white rings); longitudinal dark stripes on back breaking into flank spots; coarse grey-buff coat; facial mask / pale patches near eyes; often on ground at night in leaf litter (Cuddeback FFS sites)."
+    },
+    {
+      "species": "Small Indian Civet",
+      "folder": "small-indian-civet",
+      "photos": [
+        "I__00049.jpg",
+        "I__00051.jpg",
+        "I__00071.jpg",
+        "I__00091.jpg",
+        "I__00111.jpg",
+        "I__00152.jpg",
+        "I__00179.jpg",
+        "I__00180.jpg",
+        "I__00814.jpg",
+        "I__00814_a.jpg"
+      ],
+      "notes": "Pale grey-tan coat with clear rows of flank spots; long tail with bold black-and-pale rings — not Common Palm Civet (mostly dark unringed/faintly banded thick tail), not Leopard Cat."
     },
     {
       "species": "Grey Mongoose",

@@ -262,7 +262,8 @@ export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
               "Do not call striped Indian Wild Pig piglets Asian Elephant — use Indian Wild Pig. " +
               "Use canonical species names only (e.g. Asian Elephant, Spotted Deer, Common Leopard). " +
               "Never label Jackal or Large Indian Civet. Distinguish Grey Mongoose vs Stripe-necked Mongoose (both occur; do not default all to Stripe-necked). " +
-              "Common Palm Civet: long thick dark tail ≈ body length, back stripes + flank spots — not mongoose. " +
+              "Common Palm Civet: long thick mostly dark tail ≈ body length, back stripes + flank spots — not mongoose. " +
+              "Small Indian Civet: rows of flank spots + bold black/pale ringed tail — not Common Palm Civet. " +
               "Grey Mongoose: grizzled grey coat with NO neck stripe — do not default mongooses to Stripe-necked. " +
               "Indian Chevrotain: tiny hoofed animal with white flank spots/stripes — not cat, civet, or muntjac. " +
               "Indian Hare: long upright ears, lagomorph hop/crouch — not chevrotain. " +

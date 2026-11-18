@@ -51,11 +51,19 @@ Verified ground-truth examples live in `test-fixtures/golden/common-palm-civet/`
 - Face often darker with **pale patches / mask** near the eyes; strong eyeshine at night is common.
 - Do **not** call these **Grey Mongoose** / **Stripe-necked Mongoose** (mongooses are shorter-bodied with much shorter tails and no long striped/spotted civet pattern).
 - Do **not** call them **Jackal** or **Wild Dog**.
-- Do **not** call them **Large Indian Civet**. Prefer **Common Palm Civet** when the long dark tail + back stripes/flank spots match; use **Small Indian Civet** only when the animal better matches a smaller densely spotted civet with a more clearly banded/ringed tail pattern.
+- Do **not** call them **Large Indian Civet**. Prefer **Common Palm Civet** when the long **mostly dark** (not boldly black-and-white ringed) tail + back stripes/flank spots + often pale facial mask match.
+- Extra verified palm example: `I__01360` in the same golden folder (pale under-eye / muzzle patches; thick darkish tail).
 
-### Small Indian Civet
+### Small Indian Civet (verified reference set)
 
-Smaller, more finely spotted terrestrial civet; tail more clearly patterned/ringed than the typical thick dark Common Palm Civet tail in the reference set above.
+Verified examples: `test-fixtures/golden/small-indian-civet/` (e.g. I__00049, I__00051, I__00071, I__00091, I__00111, I__00152, I__00179, I__00180, I__00814, I__00814_a).
+
+**Small Indian Civet**: smaller terrestrial civet with a **pale grey-tan coat**, **clear rows of dark spots** along the flanks, and a long tail with **bold alternating black and pale rings** (often ~6–9 rings visible). Pointed muzzle; often walks low on leaf litter or rocks at night.
+
+- Use species_common **"Small Indian Civet"** when the **ringed tail** + flank spot rows are clear.
+- Do **not** call these **Common Palm Civet** — palm civet tails are thick and mostly dark (not high-contrast black/white rings), and palm faces often show a stronger pale mask.
+- Do **not** call them **Leopard Cat** (cats have short faces and spotted tails without civet-style black/white rings).
+- Do **not** call them mongoose or Jackal.
 
 ## 3. INDIAN CHEVROTAIN — Do not confuse with cats, civets, or muntjac
 
