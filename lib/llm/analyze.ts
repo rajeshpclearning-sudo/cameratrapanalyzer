@@ -265,6 +265,7 @@ export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
               "Common Palm Civet: long thick mostly dark tail ≈ body length, back stripes + flank spots — not mongoose. " +
               "Small Indian Civet: rows of flank spots + bold black/pale ringed tail — not Common Palm Civet. " +
               "Grey Mongoose: grizzled grey coat with NO neck stripe — do not default mongooses to Stripe-necked. " +
+              "Stripe-necked Mongoose: clear dark neck stripe + often rusty hindquarters — not Grey Mongoose. " +
               "Indian Chevrotain: tiny hoofed animal with white flank spots/stripes — not cat, civet, or muntjac. " +
               "Indian Hare: long upright ears, lagomorph hop/crouch — not chevrotain. " +
               "Indian Muntjac: small reddish deer with dark forehead ridges, usually unspotted — not chevrotain or Spotted Deer. " +

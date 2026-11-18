@@ -53,7 +53,7 @@ Do this in the **same turn** as the fix — do not wait for the user to ask for 
 Full text lives in `lib/llm/ffs-c8-rules.md`. Canonical name list: [`lib/species-dimension.ts`](../../../lib/species-dimension.ts). Apply strictly:
 
 0. **Canonical names** — wildlife labels from the dimension list only (e.g. Asian Elephant, Indian Wild Pig, Spotted Deer, Common Leopard). Never Jackal; never Large Indian Civet.
-1. **Mongoose** — both occur; Grey = grizzled coat, no neck stripe (`test-fixtures/golden/grey-mongoose/`); Stripe-necked only with clear neck stripe.
+1. **Mongoose** — both occur; Grey = grizzled coat, no neck stripe (`test-fixtures/golden/grey-mongoose/`); Stripe-necked = clear neck stripe + often rusty hindquarters (`test-fixtures/golden/stripe-necked-mongoose/`).
 2. **Civet** — "Small Indian Civet" / "Common Palm Civet" only (no Large Indian Civet). Palm: long mostly dark tail + face mask (`test-fixtures/golden/common-palm-civet/`). Small Indian: bold black/pale ringed tail + flank spot rows (`test-fixtures/golden/small-indian-civet/`).
 3. **Indian Chevrotain** — tiny, white flank spots/stripes, spindly hooves (`test-fixtures/golden/indian-chevrotain/`); not muntjac/cat/civet.
 3b. **Indian Hare** — long upright ears, lagomorph (`test-fixtures/golden/indian-hare/`); not chevrotain.
@@ -74,6 +74,7 @@ Append newest entries at the top.
 
 | Date | Issue | Rule change |
 |------|--------|-------------|
+| 2026-11-18 | Stripe-necked Mongoose verified photo set | Rule 1 + golden fixtures; neck stripe + rusty hindquarters; not Grey |
 | 2026-11-18 | Civet batch mostly Small Indian (ringed tails), not Palm | Small Indian Civet golden set + Rule 2 distinction; I__01360 added to Palm |
 | 2026-11-18 | Leopard Cat verified photo set | Rule 6 + golden fixtures; small spotted cat; not Common Leopard/civet |
 | 2026-11-18 | Indian Muntjac verified photo set | Rule 4 + golden fixtures; reddish coat + forehead ridges; not chevrotain/Spotted Deer |

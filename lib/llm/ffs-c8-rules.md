@@ -27,10 +27,15 @@ Verified examples: `test-fixtures/golden/grey-mongoose/` (e.g. I__00003, I__0000
 - Pointed snout, small rounded ears; often foraging on leaf litter day or night; sometimes **two individuals** together.
 - Label these **"Grey Mongoose"**, not Stripe-necked Mongoose, not Common Palm Civet, not Jackal.
 
-### Stripe-necked Mongoose
+### Stripe-necked Mongoose (verified reference set)
+
+Verified examples: `test-fixtures/golden/stripe-necked-mongoose/` (e.g. I__00105, I__00142, I__00284, I__01104, I__01104_1, I__01105, I__01106, I__01108, I__01529).
+
+**Stripe-necked Mongoose**: larger mongoose with a **clear dark stripe on the side of the neck** (ear toward shoulder). Coat often **grizzled grey-brown in front** grading to **rusty / reddish-orange on the hindquarters**; **darker legs**; bushy tail with a **black tip**. Day or night on leaf litter / rocks.
 
 - Use **"Stripe-necked Mongoose"** **only** when a clear **dark stripe along the side of the neck** (or unmistakable stripe-necked traits) is visible.
 - If it is clearly a mongoose and **no** neck stripe is visible, prefer **Grey Mongoose**.
+- Do **not** call these **Grey Mongoose**, civet, or Jackal when the neck stripe + rusty hindquarters match.
 
 ### Other
 
