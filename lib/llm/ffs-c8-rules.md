@@ -12,6 +12,7 @@ Do **not** use aliases such as Elephant, Wild Boar, Chital, Leopard, Dhole, or M
 
 **Never use these labels at Station C8 (wrong for this area):**
 - **Jackal** / Golden Jackal — **absent** here. Do not output Jackal. A canid that matches dhole features → **Wild Dog**; otherwise **Unidentified** (or another clear canonical species). Never force Jackal.
+- Especially: a **second deer** behind Spotted Deer or Sambar Deer is still that deer — **never** label the rear/partial deer as Jackal.
 - **Large Indian Civet** — **no distribution in Kerala**. Never output Large Indian Civet. Use **Small Indian Civet** or **Common Palm Civet** from visible traits, or **Unidentified** if unclear.
 
 ## 1. MONGOOSE — Both Stripe-necked and Grey Mongoose occur here
@@ -90,6 +91,15 @@ Verified examples: `test-fixtures/golden/indian-hare/` (e.g. I__00037, I__00046,
 - Use species_common **"Indian Hare"** (not "Rabbit", "Hare", or "Black-naped Hare" in the output).
 - Do **not** confuse with **Indian Chevrotain** (chevrotain has short ears, hoofed spindly legs, and white flank spots/stripes — hares do not).
 - Do **not** call it mongoose, civet, or cat — long ears + lagomorph shape are decisive.
+- Hares are often **small and camouflaged** in leaf litter — look carefully for long ears + crouched/hopping lagomorph shape before saying "No animal detected".
+
+## 3c. INDIAN CRESTED PORCUPINE — Quills, not twigs
+
+**Indian Crested Porcupine**: stocky nocturnal rodent with a bulky body and a clear **coat of long quills / spines** (often with banded tips); may show a crest of longer quills on the head/neck. Night eyeshine possible.
+
+- Use species_common **"Indian Crested Porcupine"** only when **quills / spines on an animal body** are clear.
+- Do **not** label **tree trunks, broken stumps, twigs, dry brush, or woody debris** as porcupine — wood and sticks are not animals.
+- If a dark shape near wood has **no** clear quills or porcupine body outline, use **No animal detected** or **Unidentified**, never invent porcupine.
 
 ## 4. DEER — Do not use White-tailed Deer
 
@@ -201,6 +211,7 @@ When **two or more different species** are clearly visible in the same photo:
 - Order species roughly by prominence (larger or closer first), then remaining clear species.
 - Same-species groups stay a single name (e.g. three Spotted Deer → species `"Spotted Deer"`, count `3`).
 - Do **not** invent a second species from a vague blur; only add species you can identify.
+- When two animals are the **same deer species** (two Spotted Deer, or two Sambar Deer), keep **one** species name and count `2`. Never call the farther / partial deer **Jackal**.
 
 Canonical miss to avoid: I__00796 — Sambar browsing left and Spotted Deer (Chital) grazing right must be **"Sambar Deer + Spotted Deer"** with count `2`, not Sambar alone.
 

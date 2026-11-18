@@ -56,8 +56,9 @@ Full text lives in `lib/llm/ffs-c8-rules.md`. Canonical name list: [`lib/species
 1. **Mongoose** — both occur; Grey = grizzled coat, no neck stripe (`test-fixtures/golden/grey-mongoose/`); Stripe-necked = clear neck stripe + often rusty hindquarters (`test-fixtures/golden/stripe-necked-mongoose/`).
 2. **Civet** — "Small Indian Civet" / "Common Palm Civet" only (no Large Indian Civet). Palm: long mostly dark tail + face mask (`test-fixtures/golden/common-palm-civet/`). Small Indian: bold black/pale ringed tail + flank spot rows (`test-fixtures/golden/small-indian-civet/`).
 3. **Indian Chevrotain** — tiny, white flank spots/stripes, spindly hooves (`test-fixtures/golden/indian-chevrotain/`); not muntjac/cat/civet.
-3b. **Indian Hare** — long upright ears, lagomorph (`test-fixtures/golden/indian-hare/`); not chevrotain.
-4. **Deer** — never White-tailed Deer; use Spotted Deer, Sambar Deer, Indian Muntjac (not Chital). Muntjac: reddish unspotted coat + dark forehead ridges (`test-fixtures/golden/indian-muntjac/`); not chevrotain/hare.
+3b. **Indian Hare** — long upright ears, lagomorph (`test-fixtures/golden/indian-hare/`); not chevrotain; check camouflaged leaf litter carefully.
+3c. **Indian Crested Porcupine** — quills on an animal only; never twigs/tree trunks.
+4. **Deer** — never White-tailed Deer; use Spotted Deer, Sambar Deer, Indian Muntjac (not Chital). Muntjac: reddish unspotted coat + dark forehead ridges (`test-fixtures/golden/indian-muntjac/`); not chevrotain/hare. Second deer never Jackal.
 5. **Primates** — "South-Eastern Langur"; "Bonnet Macaque".
 6. **Wild cats** — Tiger; Common Leopard; Leopard Cat (`test-fixtures/golden/leopard-cat/`: small spotted cat + forehead stripes); plain mid-size cat not on list → Unidentified.
 7. **Background animals** — need ≥2 anatomical features for vague secondary shapes only; any clear main-subject animal (partial or full) must be reported.
@@ -74,6 +75,7 @@ Append newest entries at the top.
 
 | Date | Issue | Rule change |
 |------|--------|-------------|
+| 2026-11-18 | Cross-check gaps: porcupine twigs; second deer→Jackal; camouflaged hare | Rule 3c; Rule 0/12; Rule 3b careful scan |
 | 2026-11-18 | Stripe-necked Mongoose verified photo set | Rule 1 + golden fixtures; neck stripe + rusty hindquarters; not Grey |
 | 2026-11-18 | Civet batch mostly Small Indian (ringed tails), not Palm | Small Indian Civet golden set + Rule 2 distinction; I__01360 added to Palm |
 | 2026-11-18 | Leopard Cat verified photo set | Rule 6 + golden fixtures; small spotted cat; not Common Leopard/civet |

@@ -261,7 +261,9 @@ export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
               "(e.g. Sambar Deer + Spotted Deer when both are visible; count = total animals). " +
               "Do not call striped Indian Wild Pig piglets Asian Elephant — use Indian Wild Pig. " +
               "Use canonical species names only (e.g. Asian Elephant, Spotted Deer, Common Leopard). " +
-              "Never label Jackal or Large Indian Civet. Distinguish Grey Mongoose vs Stripe-necked Mongoose (both occur; do not default all to Stripe-necked). " +
+              "Never label Jackal or Large Indian Civet. A second deer behind Spotted Deer or Sambar is still that deer — never Jackal. " +
+              "Distinguish Grey Mongoose vs Stripe-necked Mongoose (both occur; do not default all to Stripe-necked). " +
+              "Indian Crested Porcupine needs clear quills on an animal — never call twigs or tree trunks porcupine. " +
               "Common Palm Civet: long thick mostly dark tail ≈ body length, back stripes + flank spots — not mongoose. " +
               "Small Indian Civet: rows of flank spots + bold black/pale ringed tail — not Common Palm Civet. " +
               "Grey Mongoose: grizzled grey coat with NO neck stripe — do not default mongooses to Stripe-necked. " +
