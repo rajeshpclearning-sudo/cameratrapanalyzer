@@ -5,6 +5,7 @@ import {
   getSupabaseAdmin,
   isSupabaseConfigured,
 } from "./supabase";
+import { isYes } from "./csv-row";
 import { CSV_COL, ROW_STATUS, type CsvRow, type PersistSightingsResult } from "./types";
 import { lookupExistingSightings } from "./existing-sightings";
 
@@ -20,6 +21,13 @@ function rowToRecord(jobId: string, row: CsvRow) {
     individual_count: row[CSV_COL.individuals] || "0",
     behavior: row[CSV_COL.behavior],
     status: row[CSV_COL.status]?.trim() || ROW_STATUS.success,
+    has_human: isYes(row[CSV_COL.hasHuman]),
+    injury_or_foreign_on_animal: isYes(row[CSV_COL.injuryOrForeignOnAnimal]),
+    injury_or_foreign_notes: row[CSV_COL.injuryOrForeignNotes] || "",
+    needs_expert_review: isYes(row[CSV_COL.needsExpertReview]),
+    expert_review_reason: row[CSV_COL.expertReviewReason] || "",
+    has_foreign_object_scene: isYes(row[CSV_COL.foreignObjectInScene]),
+    foreign_object_notes: row[CSV_COL.foreignObjectNotes] || "",
   };
 }
 

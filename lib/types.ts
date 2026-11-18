@@ -5,6 +5,13 @@ export const CSV_HEADER = [
   "Species Name",
   "Number of Individuals",
   "Behavior",
+  "Has Human",
+  "Injury/Foreign on Animal",
+  "Injury/Foreign Notes",
+  "Needs Expert Review",
+  "Expert Review Reason",
+  "Foreign Object in Scene",
+  "Foreign Object Notes",
   "Status",
   "SourceFile",
   "Senna Removed/Not Removed",
@@ -20,11 +27,18 @@ export const CSV_COL = {
   speciesName: 3,
   individuals: 4,
   behavior: 5,
-  status: 6,
-  sourceFile: 7,
-  sennaStatus: 8,
-  yearOfRemoval: 9,
-  trapNights: 10,
+  hasHuman: 6,
+  injuryOrForeignOnAnimal: 7,
+  injuryOrForeignNotes: 8,
+  needsExpertReview: 9,
+  expertReviewReason: 10,
+  foreignObjectInScene: 11,
+  foreignObjectNotes: 12,
+  status: 13,
+  sourceFile: 14,
+  sennaStatus: 15,
+  yearOfRemoval: 16,
+  trapNights: 17,
 } as const;
 
 export type CsvRow = [
@@ -34,6 +48,13 @@ export type CsvRow = [
   string, // speciesName
   string, // individuals
   string, // behavior
+  string, // hasHuman Yes/No
+  string, // injuryOrForeignOnAnimal Yes/No
+  string, // injuryOrForeignNotes
+  string, // needsExpertReview Yes/No
+  string, // expertReviewReason
+  string, // foreignObjectInScene Yes/No
+  string, // foreignObjectNotes
   string, // status
   string, // sourceFile
   string, // sennaStatus
@@ -55,6 +76,15 @@ export type LlmAnalysis = {
   has_human: boolean;
   /** True when a human is clearly carrying or holding a weapon. */
   has_weapon: boolean;
+  /** Visible wound, snare/wire, or foreign material on the animal. */
+  injury_or_foreign_on_animal: boolean;
+  injury_or_foreign_notes: string;
+  /** AI unsure — needs human expert review. */
+  needs_expert_review: boolean;
+  expert_review_reason: string;
+  /** Non-animal foreign object in the scene (not worn by a person). */
+  has_foreign_object_scene: boolean;
+  foreign_object_notes: string;
 };
 
 export type FileJobStatus =

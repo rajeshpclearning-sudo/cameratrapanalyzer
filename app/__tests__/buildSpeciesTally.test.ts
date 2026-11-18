@@ -7,6 +7,7 @@ import type { CsvRow, FileJobState } from "@/lib/types";
 
 /** Build a minimal CsvRow with only the speciesName slot populated. */
 function makeRow(speciesName: string): CsvRow {
+  const human = speciesName.toLowerCase().includes("human") ? "Yes" : "No";
   return [
     "photo.jpg",
     "2024-01-01",
@@ -14,6 +15,13 @@ function makeRow(speciesName: string): CsvRow {
     speciesName,
     "1",
     "Foraging",
+    human,
+    "No",
+    "",
+    "No",
+    "",
+    "No",
+    "",
     "Success",
     "",
     "",

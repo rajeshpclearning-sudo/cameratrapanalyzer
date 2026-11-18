@@ -85,19 +85,9 @@ export function findBurstAnchorRow(rows: (CsvRow | null)[]): CsvRow | null {
 }
 
 export function inferSpeciesFromAnchor(row: CsvRow, anchor: CsvRow): CsvRow {
-  return [
-    row[0],
-    row[1],
-    row[2],
-    anchor[3],
-    row[4],
-    row[5],
-    row[6] ?? anchor[6] ?? "",
-    row[7] ?? "",
-    row[8] ?? "",
-    row[9] ?? "",
-    row[10] ?? "",
-  ];
+  const next = [...row] as CsvRow;
+  next[3] = anchor[3];
+  return next;
 }
 
 /**

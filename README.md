@@ -340,7 +340,7 @@ npm run dev:clean
 1. **Select images** — on desktop: **Upload local folder**, **Individual local files**, or **From OneDrive** (Microsoft sign-in; requires Azure client ID). On phone: **Choose photos** and/or **From OneDrive**. JPEG, PNG, WebP, HEIC; recommended 50. Tap a row/card to preview.
 2. **Optional existing log** — upload a `Camera_Trap_Analysis*.csv` to **append** new rows (header must match spec below).
 3. **Run analysis** — progress per file; **date/time come from the photo’s EXIF** (`DateTimeOriginal` when the trap took the shot), read from the **original** file bytes before any resize. If the image has no EXIF (some phone/Drive exports strip it), the app falls back to the file’s last-modified time (often “today”). Before calling the AI, the server checks your **session CSV** and **Supabase** for the same **Photo Name**. Matches are marked **Already done** (no new AI call, no second database row). Tap **Stop** anytime to halt remaining photos (the one already uploading may finish). After a stop or a full run, **upload more photos** in the same session — new uploads are auto-selected, already-analyzed photos are skipped, and **Analyze N new photo(s)** only processes waiting rows; results append to the session CSV (and Supabase when configured). Use **Clear results & re-analyze all** to wipe session memory; photos still in Supabase remain skipped unless you delete those rows in Table Editor first.
-4. **Download results** — Excel file `CTA_YYYY-MM-DD_HHmmss.xls` (opens in Excel/Sheets). Includes folder fields (**SourceFile**, **Senna Removed/Not Removed**, **Year of removal**, **Trap nights**) when the upload folder name follows the FFS pattern. **Human (armed)** rows are highlighted in **red**. Rows are sorted by **Photo Name** in natural order. Plain CSV: `/api/jobs/[id]/download?format=csv`.
+4. **Download results** — Excel file `CTA_YYYY-MM-DD_HHmmss.xls` (opens in Excel/Sheets). Includes folder fields and field-team flags (**Has Human**, injury/foreign on animal, expert review, foreign object in scene). **Human (armed)** rows are **red**; other human rows **blue**; injury/expert/foreign flags **yellow**. Filter those columns in Excel — no separate ZIP. Plain CSV: `/api/jobs/[id]/download?format=csv`.
 5. **Optional Supabase** — when configured, each **newly analyzed** row in a finished job is inserted into `camera_trap_sightings` (rows from an uploaded existing CSV or earlier session rows are not re-inserted).
 6. **Import Log** (sidebar) — upload a past analysis file in **Excel** (`.xlsx`, `.xls`) or **CSV** with the same column header as below. Preview rows, then **Import to Supabase**. If this browser imported a file with the **same filename** before, a warning appears and you must click **Import anyway** (tracking is per-browser in localStorage, not across devices). Re-importing still adds duplicate rows to Supabase.
 
@@ -373,9 +373,11 @@ Creates project `camera-trap` in Mumbai (`ap-south-1`) and runs [`supabase/schem
 4. Restart `npm run dev`.
 5. Run an analysis. In Supabase **Table Editor → camera_trap_sightings**, you should see one row per newly analyzed photo.
 
-Columns match the log sheet: photo name, date, time, species name, number of individuals, behavior, status, plus `job_id` and `created_at`. If env vars are missing, the app works as before (CSV only).
+Columns match the log sheet: photo name, date, time, species, individuals, behavior, status, **Has Human / injury / expert-review / foreign-object flags**, plus `job_id` and `created_at`. If env vars are missing, the app works as before (CSV/Excel only).
 
-**Existing Supabase projects:** run [`supabase/migrations/002_align_log_columns.sql`](supabase/migrations/002_align_log_columns.sql) once (`individual_count` → text, add `status` column).
+**Existing Supabase projects:** run these once in SQL Editor if missing:
+1. [`supabase/migrations/002_align_log_columns.sql`](supabase/migrations/002_align_log_columns.sql) (`individual_count` → text, add `status`)
+2. [`supabase/migrations/20261118_review_flag_columns.sql`](supabase/migrations/20261118_review_flag_columns.sql) (Has Human, injury/foreign, expert review, scene foreign objects)
 
 #### Where to find URL and secret key (camera-trap project)
 
@@ -405,11 +407,16 @@ Do **not** use the **publishable** key (`sb_publishable_...`) — that one is fo
 
 ### CSV / Excel columns
 
-`Photo Name,Date,Timestamp,Species Name,Number of Individuals,Behavior,Status,SourceFile,Senna Removed/Not Removed,Year of removal,Trap nights`
+`Photo Name,Date,Timestamp,Species Name,Number of Individuals,Behavior,Has Human,Injury/Foreign on Animal,Injury/Foreign Notes,Needs Expert Review,Expert Review Reason,Foreign Object in Scene,Foreign Object Notes,Status,SourceFile,Senna Removed/Not Removed,Year of removal,Trap nights`
 
-- Used for analysis download, optional append log, and **Import Log** (first worksheet row for Excel).
-- **Import** also accepts legacy header names (`Photo name`, `Species`, `# Individuals`, etc.) and older 7-column files.
+- Used for analysis download, optional append log, and **Import Log** (first worksheet row for Excel). One spreadsheet for the field team — filter columns in Excel (no separate ZIP packs).
+- **Import** also accepts legacy header names (`Photo name`, `Species`, `# Individuals`, etc.) and older 7-/11-column files (new flag columns default to `No`).
 - **Date** format: `18-Feb-2026`. **Timestamp**: `2:39 PM`.
+- **Field-team flags** (Yes/No + optional notes):
+  - **Has Human** — person / body part / belongings in the frame
+  - **Injury/Foreign on Animal** — wound, snare/wire, or foreign material **on** the animal (poaching signal)
+  - **Needs Expert Review** — AI unsure (also auto-Yes when species is Unidentified)
+  - **Foreign Object in Scene** — snare/trash/gear in the scene (not normal vegetation)
 - **Folder metadata** (from the trap folder name, e.g. `CN_7_FFS_2_23Feb2026_NR_2021_31`):
   - **SourceFile** — first five underscore parts (`CN_7_FFS_2_23Feb2026`)
   - **Senna Removed/Not Removed** — `NR` → `Not Removed`, `R` → `Removed` (full words in the sheet)
@@ -417,7 +424,8 @@ Do **not** use the **publishable** key (`sb_publishable_...`) — that one is fo
   - **Trap nights** — e.g. `31`
   - If the folder name is incomplete, fill whatever parts are present; leave the rest blank.
 - **No animal:** Species Name, Number of Individuals, and Behavior all contain descriptive text about what is seen.
-- **Humans:** Species Name `Human`; appropriate behavior. If a weapon is clearly visible with the person, Species Name `Human (armed)` (dashboard shows these in red).
+- **Humans:** Species Name `Human` (or `Human (armed)`); **Has Human** = Yes. If a weapon is clearly visible with the person, Species Name `Human (armed)` (dashboard shows these in red).
+- **Supabase:** the same flag columns are stored on `camera_trap_sightings` (see migration `supabase/migrations/20261118_review_flag_columns.sql`).
 - See [Google Sheet output](#google-sheet-output) for full rules (same semantics as future Sheets export).
 
 ### API (for reference)
@@ -501,8 +509,7 @@ Record what animals (or humans) crossed the camera trap by analyzing trap photos
 | Behavior | LLM: `foraging`, `moving`, `standing`, `resting`, `drinking`, `running`, `unknown`, etc. |
 
 **Header row (frozen):**  
-`Photo Name | Date | Timestamp | Species Name | Number of Individuals | Behavior | Status | SourceFile | Senna Removed/Not Removed | Year of removal | Trap nights`  
-(Same as current CSV export; see [CSV / Excel columns](#csv--excel-columns).)
+Same as current CSV/Excel export (includes **Has Human**, injury/foreign, expert-review, and foreign-object columns) — see [CSV / Excel columns](#csv--excel-columns).
 
 Optional later columns: `Job ID`, `Analyzed at`, `Confidence`, `Notes`, `Drive file link`.
 

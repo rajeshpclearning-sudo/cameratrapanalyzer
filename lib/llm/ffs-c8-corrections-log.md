@@ -5,6 +5,7 @@ When accuracy feedback is consolidated into `ffs-c8-rules.md` and committed to G
 
 | Date | Issue | Rule change |
 |------|--------|-------------|
+| 2026-11-18 | Field-team flags: humans, injury/foreign, expert review, scene objects | Rule 14 + main Excel columns + Supabase flags (no separate ZIP Excels) |
 | 2026-11-18 | Cross-check: porcupine twigs; second deer as Jackal; hare camouflage | Rule 3c porcupine ≠ twigs/stumps; Rule 0/12 second deer never Jackal; Rule 3b look carefully for camouflaged hare |
 | 2026-11-18 | Verified Stripe-necked Mongoose photo set (9 images) | Rule 1 expanded with golden refs in `test-fixtures/golden/stripe-necked-mongoose/`; neck stripe + rusty hindquarters; not Grey Mongoose |
 | 2026-11-18 | Civet batch labeled Palm; most are Small Indian Civet | New Small Indian Civet golden set (`test-fixtures/golden/small-indian-civet/`); Rule 2: bold ringed tail → Small Indian Civet; added I__01360 to Common Palm Civet; tighten Palm vs Small distinction |

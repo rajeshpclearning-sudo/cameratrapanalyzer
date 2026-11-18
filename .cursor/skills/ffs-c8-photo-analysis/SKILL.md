@@ -75,6 +75,7 @@ Append newest entries at the top.
 
 | Date | Issue | Rule change |
 |------|--------|-------------|
+| 2026-11-18 | Field-team review flags in main Excel + Supabase | Rule 14; Has Human / injury / expert / foreign-object columns |
 | 2026-11-18 | Cross-check gaps: porcupine twigs; second deer→Jackal; camouflaged hare | Rule 3c; Rule 0/12; Rule 3b careful scan |
 | 2026-11-18 | Stripe-necked Mongoose verified photo set | Rule 1 + golden fixtures; neck stripe + rusty hindquarters; not Grey |
 | 2026-11-18 | Civet batch mostly Small Indian (ringed tails), not Palm | Small Indian Civet golden set + Rule 2 distinction; I__01360 added to Palm |

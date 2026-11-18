@@ -11,17 +11,41 @@ type SightingRow = {
   individual_count: string | null;
   behavior: string;
   status: string | null;
+  has_human?: boolean | null;
+  injury_or_foreign_on_animal?: boolean | null;
+  injury_or_foreign_notes?: string | null;
+  needs_expert_review?: boolean | null;
+  expert_review_reason?: string | null;
+  has_foreign_object_scene?: boolean | null;
+  foreign_object_notes?: string | null;
   created_at?: string;
 };
 
+function yesNoFromDb(value: unknown): string {
+  if (value === true || value === "Yes" || value === "yes" || value === "true") {
+    return "Yes";
+  }
+  return "No";
+}
+
 function recordToCsvRow(record: SightingRow): CsvRow {
+  const species = record.species;
+  const human =
+    record.has_human === true || species.toLowerCase().includes("human");
   return [
     record.photo_name,
     record.sighting_date ?? "",
     record.sighting_time ?? "",
-    record.species,
+    species,
     record.individual_count?.trim() || "0",
     record.behavior,
+    human ? "Yes" : "No",
+    yesNoFromDb(record.injury_or_foreign_on_animal),
+    record.injury_or_foreign_notes ?? "",
+    yesNoFromDb(record.needs_expert_review),
+    record.expert_review_reason ?? "",
+    yesNoFromDb(record.has_foreign_object_scene),
+    record.foreign_object_notes ?? "",
     record.status?.trim() || ROW_STATUS.success,
     "",
     "",
@@ -58,7 +82,7 @@ export async function lookupExistingSightings(
     const { data, error } = await supabase
       .from("camera_trap_sightings")
       .select(
-        "photo_name, sighting_date, sighting_time, species, individual_count, behavior, status, created_at",
+        "photo_name, sighting_date, sighting_time, species, individual_count, behavior, status, has_human, injury_or_foreign_on_animal, injury_or_foreign_notes, needs_expert_review, expert_review_reason, has_foreign_object_scene, foreign_object_notes, created_at",
       )
       .in("photo_name", unique)
       .order("created_at", { ascending: false });

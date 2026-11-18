@@ -11,6 +11,13 @@ create table if not exists public.camera_trap_sightings (
   individual_count text not null default '0',
   behavior text not null,
   status text not null default 'Success',
+  has_human boolean not null default false,
+  injury_or_foreign_on_animal boolean not null default false,
+  injury_or_foreign_notes text not null default '',
+  needs_expert_review boolean not null default false,
+  expert_review_reason text not null default '',
+  has_foreign_object_scene boolean not null default false,
+  foreign_object_notes text not null default '',
   created_at timestamptz not null default now()
 );
 

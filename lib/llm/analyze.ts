@@ -30,6 +30,9 @@ When TRULY empty (no wildlife AND no person AND no human legs/feet/hands/fingers
 Other rules:
 - Humans (this frame only): If you see a person, legs/feet, fingers/hand, bag, sandals, shoes, or backpack → has_human true, has_animal true, species_common "Human", count people (use 1 if only legs+bag or only fingers). NEVER output empty / "no human or animal visible" for those frames. Never invent humans from neighboring burst photos.
 - Weapons: If a human clearly holds/carries a gun, rifle, firearm, bow, spear, machete, or similar weapon → has_weapon true and species_common "Human (armed)". Otherwise has_weapon false.
+- Injury / foreign on animal: injury_or_foreign_on_animal true only for a clear wound, snare/wire/collar/trap mark, or foreign material ON the animal body; put a short note in injury_or_foreign_notes (else "").
+- Expert review: needs_expert_review true when blurry, partial, ambiguous species, or conflicting cues; put a short reason in expert_review_reason (else "").
+- Scene foreign objects: has_foreign_object_scene true for non-animal objects in the scene (snare on ground, bottle, trash, gear not clearly on a person); note in foreign_object_notes (else ""). Do not set this for normal vegetation or camera overlays.
 - Do not invent rare/exotic species; for clear partial Indian wildlife of any species, do make an intelligent guess.
 - Never use "Partial animal visible at frame edge — species unconfirmed" as species_common.
 - Any clear animal that is only partly in frame (any species) gets a species name — never "No animal detected".
@@ -72,6 +75,12 @@ const responseSchema = {
         has_animal: { type: "boolean" },
         has_human: { type: "boolean" },
         has_weapon: { type: "boolean" },
+        injury_or_foreign_on_animal: { type: "boolean" },
+        injury_or_foreign_notes: { type: "string" },
+        needs_expert_review: { type: "boolean" },
+        expert_review_reason: { type: "string" },
+        has_foreign_object_scene: { type: "boolean" },
+        foreign_object_notes: { type: "string" },
       },
       required: [
         "species_common",
@@ -81,6 +90,12 @@ const responseSchema = {
         "has_animal",
         "has_human",
         "has_weapon",
+        "injury_or_foreign_on_animal",
+        "injury_or_foreign_notes",
+        "needs_expert_review",
+        "expert_review_reason",
+        "has_foreign_object_scene",
+        "foreign_object_notes",
       ],
       additionalProperties: false,
     },
@@ -166,6 +181,22 @@ export function getLlmProviderHint(): {
   };
 }
 
+function ensureReviewFields(parsed: LlmAnalysis): void {
+  parsed.injury_or_foreign_on_animal = Boolean(
+    parsed.injury_or_foreign_on_animal,
+  );
+  parsed.injury_or_foreign_notes = (
+    parsed.injury_or_foreign_notes ?? ""
+  ).trim();
+  parsed.needs_expert_review = Boolean(parsed.needs_expert_review);
+  parsed.expert_review_reason = (parsed.expert_review_reason ?? "").trim();
+  parsed.has_foreign_object_scene = Boolean(parsed.has_foreign_object_scene);
+  parsed.foreign_object_notes = (parsed.foreign_object_notes ?? "").trim();
+  if (!parsed.injury_or_foreign_on_animal) parsed.injury_or_foreign_notes = "";
+  if (!parsed.needs_expert_review) parsed.expert_review_reason = "";
+  if (!parsed.has_foreign_object_scene) parsed.foreign_object_notes = "";
+}
+
 function normalizeNoAnimalAnalysis(parsed: LlmAnalysis): LlmAnalysis {
   if (!parsed.individuals_description?.trim()) {
     parsed.individuals_description = "No animals visible";
@@ -182,6 +213,8 @@ function normalizeNoAnimalAnalysis(parsed: LlmAnalysis): LlmAnalysis {
   parsed.individual_count = 0;
   parsed.has_human = false;
   parsed.has_weapon = false;
+  parsed.injury_or_foreign_on_animal = false;
+  parsed.injury_or_foreign_notes = "";
   return parsed;
 }
 
@@ -274,6 +307,8 @@ export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
               "Leopard Cat: small spotted wild cat with forehead stripes — not Common Leopard or civet. " +
               "If a person clearly carries or holds a weapon (gun, rifle, bow, spear, machete, etc.), " +
               "set has_weapon true and species_common to Human (armed). " +
+              "Flag injury_or_foreign_on_animal for wounds/snares/foreign material ON the animal. " +
+              "Flag needs_expert_review when unsure. Flag has_foreign_object_scene for snares/trash/gear in the scene. " +
               "Honor any PENDING USER FEEDBACK in the system prompt for similar mistakes.",
           },
           {
@@ -288,7 +323,7 @@ export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
       },
     ],
     response_format: responseSchema,
-    max_tokens: 400,
+    max_tokens: 550,
   });
 
   const content = response.choices[0]?.message?.content;
@@ -297,6 +332,7 @@ export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
   }
 
   const parsed = JSON.parse(content) as LlmAnalysis;
+  ensureReviewFields(parsed);
 
   // Critical: models often set has_human true but has_animal false ("human ≠ animal"),
   // and our old path then rewrote the row as empty. Humans are presence.
@@ -331,5 +367,13 @@ export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
     parsed.species_common ?? "",
   );
 
+  if (parsed.species_common.trim().toLowerCase() === "unidentified") {
+    parsed.needs_expert_review = true;
+    if (!parsed.expert_review_reason) {
+      parsed.expert_review_reason = "Species unidentified — needs expert review";
+    }
+  }
+
+  ensureReviewFields(parsed);
   return parsed;
 }

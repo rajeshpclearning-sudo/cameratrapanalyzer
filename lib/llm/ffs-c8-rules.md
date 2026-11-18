@@ -232,3 +232,22 @@ Canonical miss to avoid: I__00796 — Sambar browsing left and Spotted Deer (Chi
 - Never label wild pig piglets as Asian Elephant because they are grey-brown, dusty, or partially obscured.
 
 Canonical miss to avoid: I__00046 — several small striped Indian Wild Pigs (and adult) must be **"Indian Wild Pig"** with the correct headcount, **not** Asian Elephant.
+
+## 14. REVIEW FLAGS — Injury, expert review, foreign objects
+
+These JSON flags feed WildEye’s **main spreadsheet columns** (and Supabase). Field teams filter the same Excel — no separate files.
+
+**Injury / foreign material on the animal** (`injury_or_foreign_on_animal`):
+- Set **true** only when you see a clear **wound**, bleeding, missing limb, or **foreign material on the animal body** (snare wire, collar, trap mark, netting, rope).
+- Put a short note in `injury_or_foreign_notes` (e.g. "wire snare on hind leg").
+- Do **not** set this for normal mud, wet fur, leaf litter stuck lightly, or camera flash glare.
+
+**Needs expert review** (`needs_expert_review`):
+- Set **true** when the ID is uncertain: blurry, heavily cropped, camouflaged, conflicting cues, or only a tiny fragment.
+- Put a short reason in `expert_review_reason`.
+- Still give your best `species_common` guess when possible; use **Unidentified** when you cannot name it.
+
+**Foreign object in the scene** (`has_foreign_object_scene`):
+- Set **true** for non-animal objects that may need field follow-up: snare/trap on the ground, bottle, can, plastic, discarded gear, tools — **not** clearly held/worn by a person already labeled Human.
+- Note what you see in `foreign_object_notes`.
+- Do **not** flag normal vegetation, rocks, logs, Cuddeback overlays, or ordinary leaf litter.

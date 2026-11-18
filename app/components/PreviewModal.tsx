@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { isArmedHumanSpecies } from "@/lib/burst-species";
-import type { CsvRow } from "@/lib/types";
+import { CSV_COL, type CsvRow } from "@/lib/types";
 
 type Props = {
   open: boolean;
@@ -134,22 +134,49 @@ export function PreviewModal({
         {row ? (
           <table className="w-full border-collapse text-label-md">
             <tbody>
-              {[
-                ["Species Name", row[3]],
-                ["Number of Individuals", row[4]],
-                ["Behavior", row[5]],
-                ["Date", row[1]],
-                ["Time", row[2]],
-                ["Status", row[6]],
-              ].map(([label, value]) => (
+              {(
+                [
+                  ["Species Name", row[CSV_COL.speciesName]],
+                  ["Number of Individuals", row[CSV_COL.individuals]],
+                  ["Behavior", row[CSV_COL.behavior]],
+                  ["Has Human", row[CSV_COL.hasHuman]],
+                  ["Injury/Foreign on Animal", row[CSV_COL.injuryOrForeignOnAnimal]],
+                  ["Injury/Foreign Notes", row[CSV_COL.injuryOrForeignNotes]],
+                  ["Needs Expert Review", row[CSV_COL.needsExpertReview]],
+                  ["Expert Review Reason", row[CSV_COL.expertReviewReason]],
+                  ["Foreign Object in Scene", row[CSV_COL.foreignObjectInScene]],
+                  ["Foreign Object Notes", row[CSV_COL.foreignObjectNotes]],
+                  ["Date", row[CSV_COL.date]],
+                  ["Time", row[CSV_COL.timestamp]],
+                  ["Status", row[CSV_COL.status]],
+                ] as const
+              )
+                .filter(
+                  ([label, value]) =>
+                    value?.trim() ||
+                    label === "Species Name" ||
+                    label === "Has Human" ||
+                    label === "Injury/Foreign on Animal" ||
+                    label === "Needs Expert Review" ||
+                    label === "Foreign Object in Scene",
+                )
+                .map(([label, value]) => (
                 <tr key={label} className="border-b border-outline-variant/30">
                   <td className="py-2 pr-md text-on-surface-variant">{label}</td>
                   <td
                     className={`py-2 font-medium ${
                       label === "Species Name" && armedHuman ? "text-error" : ""
+                    } ${
+                      (label === "Needs Expert Review" ||
+                        label === "Injury/Foreign on Animal" ||
+                        label === "Foreign Object in Scene" ||
+                        label === "Has Human") &&
+                      value === "Yes"
+                        ? "text-error"
+                        : ""
                     }`}
                   >
-                    {value}
+                    {value || "—"}
                   </td>
                 </tr>
               ))}

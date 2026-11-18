@@ -1,7 +1,7 @@
 import { isArmedHumanSpecies } from "./burst-species";
 import { sortRowsByPhotoName } from "./csv";
-import { normalizeCsvRow } from "./csv-row";
-import { CSV_HEADER, type CsvRow } from "./types";
+import { isYes, normalizeCsvRow } from "./csv-row";
+import { CSV_COL, CSV_HEADER, type CsvRow } from "./types";
 
 function escapeXml(value: string): string {
   return value
@@ -31,8 +31,16 @@ export function buildArmedHighlightSpreadsheet(rows: CsvRow[]): string {
 
   const body = ordered
     .map((row) => {
-      const armed = isArmedHumanSpecies(row[3] ?? "");
-      const style = armed ? ' ss:StyleID="Armed"' : "";
+      const armed = isArmedHumanSpecies(row[CSV_COL.speciesName] ?? "");
+      const review =
+        isYes(row[CSV_COL.needsExpertReview]) ||
+        isYes(row[CSV_COL.injuryOrForeignOnAnimal]) ||
+        isYes(row[CSV_COL.foreignObjectInScene]);
+      const human = isYes(row[CSV_COL.hasHuman]);
+      let style = "";
+      if (armed) style = ' ss:StyleID="Armed"';
+      else if (review) style = ' ss:StyleID="Review"';
+      else if (human) style = ' ss:StyleID="Human"';
       const cells = row
         .map(
           (value) =>
@@ -62,6 +70,14 @@ export function buildArmedHighlightSpreadsheet(rows: CsvRow[]): string {
   <Style ss:ID="Armed">
    <Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1" ss:Color="#9B0000"/>
    <Interior ss:Color="#FFCDD2" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="Review">
+   <Font ss:FontName="Calibri" ss:Size="11"/>
+   <Interior ss:Color="#FFF3CD" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="Human">
+   <Font ss:FontName="Calibri" ss:Size="11"/>
+   <Interior ss:Color="#D6EAF8" ss:Pattern="Solid"/>
   </Style>
  </Styles>
  <Worksheet ss:Name="Camera Trap Log">

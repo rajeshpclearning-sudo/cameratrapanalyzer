@@ -25,6 +25,7 @@ import {
 import {
   buildAnalysisCsvRow,
   normalizeCsvRow,
+  reviewFlagsFromAnalysis,
   withTrapFolderFields,
 } from "./csv-row";
 import { parseTrapFolderName } from "./folder-meta";
@@ -52,6 +53,7 @@ function llmToRow(
   analysis: LlmAnalysis,
   folderName?: string | null,
 ): CsvRow {
+  const flags = reviewFlagsFromAnalysis(analysis);
   return buildAnalysisCsvRow({
     photoName,
     date,
@@ -61,6 +63,7 @@ function llmToRow(
     behavior: analysis.behavior,
     status: ROW_STATUS.success,
     folderName,
+    ...flags,
   });
 }
 
@@ -80,6 +83,13 @@ function copyAnalysisRow(
     behavior: source[CSV_COL.behavior],
     status: source[CSV_COL.status] ?? ROW_STATUS.success,
     folderName,
+    hasHuman: source[CSV_COL.hasHuman],
+    injuryOrForeignOnAnimal: source[CSV_COL.injuryOrForeignOnAnimal],
+    injuryOrForeignNotes: source[CSV_COL.injuryOrForeignNotes],
+    needsExpertReview: source[CSV_COL.needsExpertReview],
+    expertReviewReason: source[CSV_COL.expertReviewReason],
+    foreignObjectInScene: source[CSV_COL.foreignObjectInScene],
+    foreignObjectNotes: source[CSV_COL.foreignObjectNotes],
   });
   if (!folderName?.trim()) {
     row[CSV_COL.sourceFile] = source[CSV_COL.sourceFile] ?? "";
