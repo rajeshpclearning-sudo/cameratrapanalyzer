@@ -88,6 +88,15 @@
         "Indian_Muntjac.jpg"
       ],
       "notes": "Small reddish-brown deer; dark V forehead ridges/pedicles; short simple antlers on males; white underside of short tail; unspotted flanks — not chevrotain, not Spotted Deer, not Sambar, not hare."
+    },
+    {
+      "species": "Leopard Cat",
+      "folder": "leopard-cat",
+      "photos": [
+        "I__00010.jpg",
+        "I__00090.jpg"
+      ],
+      "notes": "House-cat sized; pale tawny coat with clear dark spots/rosettes; forehead eye-to-crown stripes; thick spotted/ringed tail — not Common Leopard (too small), not civet, not Tiger."
     }
   ]
 }

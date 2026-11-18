@@ -267,6 +267,7 @@ export async function analyzeImage(jpegBuffer: Buffer): Promise<LlmAnalysis> {
               "Indian Chevrotain: tiny hoofed animal with white flank spots/stripes — not cat, civet, or muntjac. " +
               "Indian Hare: long upright ears, lagomorph hop/crouch — not chevrotain. " +
               "Indian Muntjac: small reddish deer with dark forehead ridges, usually unspotted — not chevrotain or Spotted Deer. " +
+              "Leopard Cat: small spotted wild cat with forehead stripes — not Common Leopard or civet. " +
               "If a person clearly carries or holds a weapon (gun, rifle, bow, spear, machete, etc.), " +
               "set has_weapon true and species_common to Human (armed). " +
               "Honor any PENDING USER FEEDBACK in the system prompt for similar mistakes.",

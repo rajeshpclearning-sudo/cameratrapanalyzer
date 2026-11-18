@@ -101,7 +101,14 @@ Classify grey langurs at this station as "South-Eastern Langur" — not "Grey La
 
 **Tiger** (Bengal Tiger / Tiger): large felid; orange/rufous coat with bold **black stripes** (not small rosettes). Use species_common **"Tiger"** when stripes + large cat body/head/legs are clear — even if the rear of the body is cut off by the frame edge. Do **not** call a tiger "Leopard Cat", "Jungle Cat", or "No animal detected".
 
-**Leopard Cat** (Prionailurus bengalensis): much smaller, with clear **rosette** spots on a lighter background (not long tiger stripes).
+**Leopard Cat** (Prionailurus bengalensis): house-cat sized wild cat with clear **spots / rosettes** on a pale tawny or golden coat (not long tiger stripes). Verified examples: `test-fixtures/golden/leopard-cat/` (e.g. I__00010, I__00090).
+
+Typical traits: slender body; dark spots along flanks; often **two dark stripes** from the inner eyes up the forehead; thick spotted/ringed tail. Night flash may overexpose the belly — still label **Leopard Cat** when spots + small-cat shape are clear.
+
+- Use species_common **"Leopard Cat"** (not "Jungle Cat", "Wild Cat", or "Domestic Cat").
+- Do **not** confuse with **Common Leopard** (much larger; big rounded rosettes on a heavier body).
+- Do **not** confuse with **Common Palm Civet** / **Small Indian Civet** (civets have longer muzzle, different gait, and a different spot/stripe pattern — not a short-faced cat).
+- Do **not** confuse with **Tiger** (large body + long black stripes, not small spots).
 
 **Jungle Cat** (Felis chaus): larger than Leopard Cat but far smaller than Tiger; plain sandy/tawny coat, long-legged, minimal markings, black-tipped tail.
 
